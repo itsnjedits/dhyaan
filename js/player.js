@@ -8,14 +8,49 @@
 //          correct HTMLAudioElement (creating a second Audio() would play twice).
 //   ❌→✅  Repeat-mode 'none' advanced to next track because the original ended
 //          handler had `|| true` making the condition always truthy.
+//
+// ── CORS FIX (this file) ─────────────────────────────────────────────────────
+//   ❌→✅  MediaElementAudioSource outputs zeroes / visualizer dead:
+//
+//          ROOT CAUSE:
+//            new Audio() was created with NO crossOrigin attribute.
+//            The browser therefore made a plain (non-CORS) HTTP request for the
+//            raw.githubusercontent.com MP3 — no Origin header, no CORS handshake.
+//            When connectAudio() later called
+//              audioCtx.createMediaElementSource(_audio)
+//            the Web Audio API detected that the element was loaded without CORS
+//            access and silently zero-filled all analyser output.
+//            The audio element itself still plays (media pipeline is separate from
+//            the Web Audio graph) but the visualiser sees a flat line.
+//
+//          FIX:
+//            Set  _audio.crossOrigin = 'anonymous'  (and _nextAudio too)
+//            BEFORE any .src assignment ever happens.
+//            With crossOrigin='anonymous' the browser sends an Origin header;
+//            raw.githubusercontent.com replies with
+//              Access-Control-Allow-Origin: *
+//            so the CORS handshake succeeds and Web Audio can read real samples.
+//
+//          ADDITIONALLY:
+//            _normalizeAudioUrl() rewrites raw.githubusercontent.com URLs to the
+//            jsDelivr CDN (cdn.jsdelivr.net/gh/…).  jsDelivr is a proper CDN
+//            with guaranteed CORS headers, edge caching, and better latency than
+//            raw GitHub blobs — zero downside.
+//            Format: https://raw.githubusercontent.com/USER/REPO/BRANCH/PATH
+//                 →  https://cdn.jsdelivr.net/gh/USER/REPO@BRANCH/PATH
 
 import { CONFIG } from './config.js';
 import { saveState, getState } from './storage.js';
 
-let _tracks      = [];
+let _tracks       = [];
 let _currentIndex = 0;
-let _audio        = new Audio();
-let _nextAudio    = new Audio();
+
+// ── CORS FIX: crossOrigin MUST be set before the very first .src assignment ──
+let _audio     = new Audio();
+let _nextAudio = new Audio();
+_audio.crossOrigin     = 'anonymous';   // ← THE FIX
+_nextAudio.crossOrigin = 'anonymous';   // ← THE FIX
+
 let _preloadTimer = null;
 
 let _onTrackChange = null;
@@ -25,8 +60,37 @@ let _onStateChange = null;
 _audio.preload     = 'none';
 _nextAudio.preload = 'none';
 
-// ── FIX: export so visualizer.connectAudio() gets the same element ──────────
+// ── Export audio element so visualizer uses the same instance ────────────────
 export function getAudio() { return _audio; }
+
+// ── URL normalizer: raw.githubusercontent.com → jsDelivr CDN ────────────────
+//
+//   raw.githubusercontent.com works, but jsDelivr is more reliable:
+//     • Proper CDN edge nodes (lower latency worldwide)
+//     • Guaranteed CORS headers (Access-Control-Allow-Origin: *)
+//     • Avoids GitHub's occasional rate-limiting on raw blob downloads
+//
+//   Conversion: https://raw.githubusercontent.com/USER/REPO/BRANCH/REST
+//            →  https://cdn.jsdelivr.net/gh/USER/REPO@BRANCH/REST
+//
+function _normalizeAudioUrl(url) {
+  if (!url) return url;
+  try {
+    const RAW = 'https://raw.githubusercontent.com/';
+    if (url.startsWith(RAW)) {
+      const rest  = url.slice(RAW.length);          // USER/REPO/BRANCH/path…
+      const parts = rest.split('/');
+      if (parts.length >= 3) {
+        const user   = parts[0];
+        const repo   = parts[1];
+        const branch = parts[2];
+        const path   = parts.slice(3).join('/');
+        return `https://cdn.jsdelivr.net/gh/${user}/${repo}@${branch}/${path}`;
+      }
+    }
+  } catch (_) {}
+  return url;   // leave non-GitHub URLs untouched
+}
 
 export function initPlayer(tracks, callbacks = {}) {
   _tracks         = tracks;
@@ -42,8 +106,7 @@ export function initPlayer(tracks, callbacks = {}) {
     if (_onProgress) _onProgress(_audio.currentTime, _audio.duration || 0);
   });
 
-  // ── FIX: removed the erroneous `|| true` that caused 'none' mode to still
-  //    advance to the next track.
+  // Repeat / advance logic — no erroneous `|| true` here
   _audio.addEventListener('ended', () => {
     const { repeatMode } = getState();
     if (repeatMode === 'one') {
@@ -60,11 +123,12 @@ export function initPlayer(tracks, callbacks = {}) {
   _audio.addEventListener('canplay', () => _onStateChange('ready'));
 
   // Restore last session (no autoplay)
+  // crossOrigin is already set above, so this src assignment is CORS-safe
   if (state.lastTrackId != null) {
     const idx = _tracks.findIndex(t => t.id === state.lastTrackId);
     if (idx !== -1) {
       _currentIndex       = idx;
-      _audio.src          = _tracks[idx].audio_url;
+      _audio.src          = _normalizeAudioUrl(_tracks[idx].audio_url);
       _audio.currentTime  = state.currentTime || 0;
       _onTrackChange(_tracks[idx], idx);
     }
@@ -78,9 +142,10 @@ export function loadTrack(index, autoplay = false) {
 
   _audio.pause();
 
-  // ── FIX: set src then call .load() — forces browser to abandon previous
-  //    network request so the new URL is actually fetched.
-  _audio.src = track.audio_url;
+  // Assign normalized URL then load() so the browser abandons the previous
+  // network request before starting a new one.
+  // crossOrigin='anonymous' was set at element creation — no need to re-set.
+  _audio.src = _normalizeAudioUrl(track.audio_url);
   _audio.load();
   _audio.currentTime = 0;
 
@@ -100,7 +165,8 @@ function _preloadNext(currentIdx) {
     : (currentIdx + 1) % _tracks.length;
   const next = _tracks[nextIdx];
   if (next) {
-    _nextAudio.src     = next.audio_url;
+    // _nextAudio.crossOrigin is already 'anonymous' — safe to assign src
+    _nextAudio.src     = _normalizeAudioUrl(next.audio_url);
     _nextAudio.preload = 'metadata';
   }
 }
@@ -143,9 +209,7 @@ export function setVolume(vol) {
 export function getVolume()       { return _audio.volume; }
 export function getCurrentTrack() { return _tracks[_currentIndex] || null; }
 export function getCurrentIndex() { return _currentIndex; }
-
-// ── FIX: getDuration was missing from exports — seekbar pct → time failed ───
-export function getDuration()    { return isFinite(_audio.duration) ? _audio.duration : 0; }
-export function getCurrentTime() { return _audio.currentTime || 0; }
-export function setTracks(t)     { _tracks = t; }
-export function getTracks()      { return _tracks; }
+export function getDuration()     { return isFinite(_audio.duration) ? _audio.duration : 0; }
+export function getCurrentTime()  { return _audio.currentTime || 0; }
+export function setTracks(t)      { _tracks = t; }
+export function getTracks()       { return _tracks; }
