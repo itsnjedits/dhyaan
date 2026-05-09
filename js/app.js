@@ -1,7 +1,7 @@
 // app.js — Main orchestrator
 import { CONFIG } from './config.js';
 import { loadState, saveState, getState } from './storage.js';
-import { initPlayer, loadTrack, togglePlay, nextTrack, prevTrack, seekBy, seekTo, setVolume, getVolume, isPlaying, getCurrentTrack, getCurrentIndex, getTracks, setTracks } from './player.js';
+import { initPlayer, loadTrack, togglePlay, nextTrack, prevTrack, seekBy, seekTo, setVolume, getVolume, isPlaying, getCurrentTrack, getCurrentIndex, getTracks, setTracks, getDuration } from './player.js';
 import { initExplorer, filterByMood, getRandomTrack } from './explorer.js';
 import { searchTracks } from './search.js';
 import { createPlaylist, renamePlaylist, deletePlaylist, addToPlaylist, getAllPlaylists, exportPlaylist, importPlaylist } from './playlist.js';
@@ -21,7 +21,7 @@ async function boot() {
   const state = loadState();
   applyTheme(state.theme || 'zen-dark');
 
-  // Canvas visualizer
+  // Canvas visualizer — defer one frame so CSS layout has applied
   const canvas = document.getElementById('particle-canvas');
   if (canvas) {
     initVisualizer(canvas);
@@ -30,7 +30,16 @@ async function boot() {
 
   try {
     const res = await fetch(CONFIG.DATA_URL);
-    allTracks = await res.json();
+    const raw = await res.json();
+
+    // ── FIX #1: meditation.json has NO id field on any track.
+    //    Without IDs every findIndex call returns 0 (undefined === undefined is
+    //    true for all entries), so every play click loads track 0.
+    //    Assign stable string IDs based on array position at load time.
+    allTracks = raw.map((t, i) => ({
+      ...t,
+      id: t.id != null ? String(t.id) : String(i),
+    }));
   } catch (e) {
     showToast('Could not load tracks. Check your connection.');
     allTracks = [];
@@ -91,9 +100,12 @@ function renderTrackList(tracks) {
   tracks.forEach((track, i) => {
     const card = renderTrackCard(track, i, {
       active: track.id === activeId,
-      onPlay: (t, idx) => {
+      onPlay: (t) => {
+        // ── FIX #2: always look up by stable ID, never by display index.
+        //    Previously used `idx` from the display list which could point to
+        //    a different global position after mood/search filtering.
         const globalIdx = allTracks.findIndex(at => at.id === t.id);
-        loadTrack(globalIdx, true);
+        if (globalIdx !== -1) loadTrack(globalIdx, true);
       },
       onFavorite: () => {},
       onAddToPlaylist: (t) => showAddToPlaylistModal(t),
@@ -107,10 +119,8 @@ function renderTrackList(tracks) {
 function handleTrackChange(track) {
   updateNowPlaying(track, true);
   updatePlayPauseBtn(true);
-  // Update active card
   const container = document.getElementById('track-list');
   if (container) updateTrackCardActive(container, track.id);
-  // Scroll to active card
   const activeCard = container?.querySelector('.track-card.active');
   if (activeCard) activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -120,9 +130,13 @@ function handleProgress(current, duration) {
 }
 
 function handlePlayerState(state) {
-  if (state === 'play') updatePlayPauseBtn(true);
-  else if (state === 'pause') updatePlayPauseBtn(false);
-  else if (state === 'buffering') {
+  if (state === 'play') {
+    updatePlayPauseBtn(true);
+    startVisualizer(); // ensure visualizer is running during playback
+  } else if (state === 'pause') {
+    updatePlayPauseBtn(false);
+    // keep ambient particles running — stopVisualizer() is intentionally NOT called
+  } else if (state === 'buffering') {
     const btn = document.getElementById('play-pause-btn');
     if (btn) btn.innerHTML = `<span class="spin">◌</span>`;
   }
@@ -155,34 +169,31 @@ function bindPlayerControls(state) {
     });
   }
 
-  // Progress bar
+  // Progress bar — click to seek
   const progressBar = document.getElementById('progress-bar');
   if (progressBar) {
     progressBar.addEventListener('mousedown', () => { isDragging = true; });
-    progressBar.addEventListener('touchstart', () => { isDragging = true; });
+    progressBar.addEventListener('touchstart', () => { isDragging = true; }, { passive: true });
+
     progressBar.addEventListener('click', (e) => {
       const rect = progressBar.getBoundingClientRect();
-      const pct = (e.clientX - rect.left) / rect.width;
-      const { getCurrentTrack: ct, getDuration } = window.__player || {};
-      const dur = document.getElementById('duration')?.dataset?.dur || 0;
-      // Read from audio via custom event
-      document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      // ── FIX #3: read actual audio duration from player, not from DOM text.
+      const dur = getDuration();
+      if (dur && isFinite(dur)) seekTo(pct * dur);
       isDragging = false;
     });
+
     progressBar.addEventListener('mouseup', () => { isDragging = false; });
+    progressBar.addEventListener('mouseleave', () => { isDragging = false; });
   }
 
-  // Seek via pct
+  // ── FIX #4: dhyaan:seek custom event (fired by expand overlay click)
+  //    Previously parsed duration from DOM text — brittle and broke on
+  //    tracks longer than 59:59. Now uses getDuration() directly.
   document.addEventListener('dhyaan:seek', (e) => {
-    const audio = document.querySelector('audio');
-    // Fallback: use the player's seek function
-    const { player } = window._dhyaan || {};
-    // Calculate from displayed duration
-    const durEl = document.getElementById('duration');
-    const timeText = durEl?.textContent || '0:00';
-    const [m, s] = timeText.split(':').map(Number);
-    const dur = (m * 60) + (s || 0);
-    if (dur) seekTo(e.detail.pct * dur);
+    const dur = getDuration();
+    if (dur && isFinite(dur)) seekTo(e.detail.pct * dur);
   });
 
   // Shuffle
@@ -215,9 +226,8 @@ function bindPlayerControls(state) {
     const track = getRandomTrack(currentMood !== 'All' ? currentMood : null);
     if (!track) return;
     const idx = allTracks.findIndex(t => t.id === track.id);
-    loadTrack(idx, true);
+    if (idx !== -1) loadTrack(idx, true);
     showToast(`🎲 ${track.title}`);
-    // Scroll to card
     setTimeout(() => {
       const container = document.getElementById('track-list');
       const card = container?.querySelector(`[data-id="${track.id}"]`);
@@ -280,7 +290,6 @@ function activateExpand(save = true) {
   setExpandMode(true);
   resizeVisualizer();
   if (save) saveState({ expandMode: true });
-  // Load high-res
   const track = getCurrentTrack();
   if (track) {
     const expandImg = document.getElementById('expand-image');
@@ -366,7 +375,7 @@ function renderPlaylistSidebar() {
       if (confirm(`Delete "${pl.name}"?`)) {
         deletePlaylist(pl.id);
         renderPlaylistSidebar();
-        showToast(`Playlist deleted`);
+        showToast('Playlist deleted');
       }
     });
     container.appendChild(item);

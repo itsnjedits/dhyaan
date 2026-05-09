@@ -19,12 +19,8 @@ export function renderTrackCard(track, index, opts = {}) {
 
   card.innerHTML = `
     <div class="track-thumb">
-      <img 
-        src="${CONFIG.FALLBACK_IMAGE}"
-        data-low="${track.image_url?.low || CONFIG.FALLBACK_IMAGE}"
-        data-high="${track.image_url?.high || CONFIG.FALLBACK_IMAGE}"
+      <img
         alt="${track.title}"
-        loading="lazy"
         class="track-img"
       />
       <div class="track-play-overlay">
@@ -40,39 +36,56 @@ export function renderTrackCard(track, index, opts = {}) {
       ).join('')}</div>
     </div>
     <div class="track-actions">
-      <button class="icon-btn fav-btn ${fav ? 'active' : ''}" title="Favorite">
+      <button class="icon-btn fav-btn ${fav ? 'active' : ''}" title="Favorite" aria-label="${fav ? 'Remove from favorites' : 'Add to favorites'}">
         ${fav ? icons.heartFilled : icons.heart}
       </button>
-      <button class="icon-btn add-pl-btn" title="Add to playlist">
+      <button class="icon-btn add-pl-btn" title="Add to playlist" aria-label="Add to playlist">
         ${icons.plus}
       </button>
-      <a class="icon-btn dl-btn" href="${track.audio_url}" download="${track.title}.mp3" title="Download">
+      <button class="icon-btn dl-btn" title="Download" aria-label="Download ${track.title}" data-audio-url="${track.audio_url}" data-title="${track.title}">
         ${icons.download}
-      </a>
+      </button>
     </div>
   `;
 
-  // Lazy load image
+  // ── FIX: Lazy load image — assign onload/onerror BEFORE setting src to
+  //    avoid a cache race condition where load fires before handler is bound.
   const img = card.querySelector('.track-img');
+  const lowSrc = track.image_url?.low || null;
+  const highSrc = track.image_url?.high || null;
+
   const io = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       if (entry.isIntersecting) {
-        img.src = img.dataset.low;
-        img.onload = () => img.classList.add('loaded');
         io.disconnect();
+        if (!lowSrc) return; // no image URL — stay invisible
+        // Assign handlers first, THEN src
+        img.onload = () => img.classList.add('loaded');
+        img.onerror = () => {
+          // Image failed (404 or CORS); stay invisible — no broken icon
+          img.removeAttribute('src');
+        };
+        img.src = lowSrc;
       }
     }
-  }, { rootMargin: '100px' });
+  }, { rootMargin: '150px' });
   io.observe(img);
 
   // Hover: preload high-res
-  img.addEventListener('mouseover', () => {
-    if (!img.dataset.preloaded) {
+  if (highSrc) {
+    img.addEventListener('mouseover', () => {
+      if (img.dataset.hiLoaded) return;
+      img.dataset.hiLoaded = '1';
       const hi = new Image();
-      hi.src = img.dataset.high;
-      img.dataset.preloaded = '1';
-    }
-  }, { once: true });
+      hi.onload = () => {
+        // Only swap if the low-res is already shown
+        if (img.classList.contains('loaded')) {
+          img.src = highSrc;
+        }
+      };
+      hi.src = highSrc;
+    }, { once: true });
+  }
 
   card.querySelector('.track-play-btn').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -88,12 +101,48 @@ export function renderTrackCard(track, index, opts = {}) {
     const isFav = newFavs.includes(track.id);
     btn.innerHTML = isFav ? icons.heartFilled : icons.heart;
     btn.classList.toggle('active', isFav);
+    btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
     onFavorite && onFavorite(track, isFav);
   });
 
   card.querySelector('.add-pl-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     onAddToPlaylist && onAddToPlaylist(track);
+  });
+
+  // ── FIX: Download via fetch + Blob so cross-origin GitHub raw URLs actually
+  //    download instead of navigating (browsers block the `download` attribute
+  //    on cross-origin anchors).
+  card.querySelector('.dl-btn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const url = btn.dataset.audioUrl;
+    const title = btn.dataset.title || 'track';
+    if (!url) return;
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = `<span class="spin">◌</span>`;
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${title}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err) {
+      console.warn('Download failed, falling back to open in new tab:', err);
+      window.open(url, '_blank', 'noopener');
+    } finally {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }
   });
 
   return card;
@@ -142,20 +191,22 @@ export function updateNowPlaying(track, playing) {
   const expandImgEl = document.getElementById('expand-image');
 
   if (titleEl) titleEl.textContent = track.title;
-  if (moodsEl) moodsEl.textContent = (track.moods || []).join(' · ');
+  if (moodsEl) moodsEl.textContent = (track.moods || []).join(' · ') || '―';
 
+  // ── FIX: assign onload before src (same race-condition fix as track cards)
   if (imgEl) {
-    imgEl.src = track.image_url?.low || CONFIG.FALLBACK_IMAGE;
     imgEl.classList.remove('loaded');
     imgEl.onload = () => imgEl.classList.add('loaded');
+    imgEl.onerror = () => imgEl.removeAttribute('src');
+    imgEl.src = track.image_url?.low || '';
   }
   if (expandImgEl) {
-    expandImgEl.src = track.image_url?.high || CONFIG.FALLBACK_IMAGE;
     expandImgEl.classList.remove('loaded');
     expandImgEl.onload = () => expandImgEl.classList.add('loaded');
+    expandImgEl.onerror = () => expandImgEl.removeAttribute('src');
+    expandImgEl.src = track.image_url?.high || track.image_url?.low || '';
   }
 
-  // Update page title
   document.title = `${track.title} — Dhyaan`;
 }
 
@@ -168,7 +219,6 @@ export function updatePlayPauseBtn(playing) {
 }
 
 export function updateProgress(current, duration) {
-  const bar = document.getElementById('progress-bar');
   const filled = document.getElementById('progress-filled');
   const currEl = document.getElementById('current-time');
   const durEl = document.getElementById('duration');

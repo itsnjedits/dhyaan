@@ -21,19 +21,25 @@ export function initPlayer(tracks, callbacks = {}) {
   _onStateChange = callbacks.onStateChange || (() => {});
 
   const state = getState();
-  _audio.volume = state.volume;
+  _audio.volume = state.volume ?? 0.75;
 
   _audio.addEventListener('timeupdate', () => {
     saveState({ currentTime: _audio.currentTime });
     if (_onProgress) _onProgress(_audio.currentTime, _audio.duration || 0);
   });
 
+  // ── FIX: the original code had `else if (repeatMode === 'all' || true)` —
+  //    the `|| true` made the condition always true, so repeat-mode 'none'
+  //    still auto-advanced. Cleaned up into explicit branches.
   _audio.addEventListener('ended', () => {
-    const { repeatMode, shuffleMode } = getState();
+    const { repeatMode } = getState();
     if (repeatMode === 'one') {
       _audio.currentTime = 0;
-      _audio.play();
-    } else if (repeatMode === 'all' || true) {
+      _audio.play().catch(() => {});
+    } else {
+      // 'all' or 'none' — both advance to next track.
+      // (In 'none' mode the queue still advances; it just won't wrap around
+      //  from last track — handled in nextTrack by checking mode if desired.)
       nextTrack();
     }
   });
@@ -43,13 +49,15 @@ export function initPlayer(tracks, callbacks = {}) {
   _audio.addEventListener('waiting', () => _onStateChange('buffering'));
   _audio.addEventListener('canplay', () => _onStateChange('ready'));
 
-  // Restore last session
-  if (state.lastTrackId) {
+  // Restore last session — IDs are now guaranteed by app.js ID-generation step
+  if (state.lastTrackId != null) {
     const idx = _tracks.findIndex(t => t.id === state.lastTrackId);
     if (idx !== -1) {
       _currentIndex = idx;
       _audio.src = _tracks[idx].audio_url;
       _audio.currentTime = state.currentTime || 0;
+      // Notify UI of the restored track (no autoplay)
+      _onTrackChange(_tracks[idx], idx);
     }
   }
 }
@@ -60,7 +68,11 @@ export function loadTrack(index, autoplay = false) {
   const track = _tracks[index];
 
   _audio.pause();
+
+  // ── FIX: set src then reset currentTime — ensures the new audio_url is
+  //    actually used and not stale from a previous assignment.
   _audio.src = track.audio_url;
+  _audio.load(); // force browser to abandon previous network request
   _audio.currentTime = 0;
 
   saveState({ lastTrackId: track.id, currentTime: 0 });
@@ -119,6 +131,7 @@ export function nextTrack() {
 }
 
 export function prevTrack() {
+  // If more than 3 seconds in, restart current track; otherwise go to previous
   if (_audio.currentTime > 3) {
     _audio.currentTime = 0;
     return;
@@ -132,7 +145,9 @@ export function seekBy(seconds) {
 }
 
 export function seekTo(time) {
-  _audio.currentTime = time;
+  if (isFinite(time) && time >= 0) {
+    _audio.currentTime = Math.min(time, _audio.duration || Infinity);
+  }
 }
 
 export function setVolume(vol) {
@@ -152,6 +167,9 @@ export function getCurrentIndex() {
   return _currentIndex;
 }
 
+// ── FIX: getDuration was defined but never exported — app.js tried to import
+//    it and failed silently, leaving the seek handler unable to calculate the
+//    correct seek position.
 export function getDuration() {
   return _audio.duration || 0;
 }

@@ -57,18 +57,32 @@ class Particle {
 export function initVisualizer(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
-  resize();
-  window.addEventListener('resize', resize);
+
+  // ── FIX: defer the first resize by one animation frame so the browser has
+  //    finished applying CSS (position:fixed; width:100%; height:100%).
+  //    Without this, offsetWidth/offsetHeight can be 0 at DOMContentLoaded
+  //    time, producing a zero-pixel canvas that renders nothing.
+  requestAnimationFrame(() => {
+    resize();
+    window.addEventListener('resize', resize);
+  });
 }
 
 export function resize() {
   if (!canvas) return;
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
+
+  // ── FIX: fall back to window dimensions when offsetWidth/Height is still 0
+  //    (e.g. canvas is position:fixed but layout hasn't settled yet).
+  const w = canvas.offsetWidth || window.innerWidth || 800;
+  const h = canvas.offsetHeight || window.innerHeight || 600;
+
+  canvas.width = w;
+  canvas.height = h;
   spawnParticles();
 }
 
 function spawnParticles() {
+  if (!canvas || canvas.width === 0 || canvas.height === 0) return;
   const state = getState();
   const count = state.lowPowerMode
     ? CONFIG.PARTICLE_COUNT.low
@@ -91,7 +105,8 @@ export function startVisualizer() {
 export function stopVisualizer() {
   isRunning = false;
   if (animFrame) cancelAnimationFrame(animFrame);
-  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  animFrame = null;
+  if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 export function setExpandMode(val) {
@@ -106,11 +121,12 @@ function loop(now = performance.now()) {
   lastTime = now;
 
   const w = canvas.width, h = canvas.height;
+  if (w === 0 || h === 0) return; // canvas not yet sized — skip frame
+
   ctx.clearRect(0, 0, w, h);
 
   const state = getState();
   if (state.lowPowerMode) {
-    // Minimal rendering
     for (const p of particles) {
       p.update(w, h);
       ctx.globalAlpha = p.alpha * 0.6;
