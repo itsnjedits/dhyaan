@@ -1,11 +1,12 @@
 // app.js — Main orchestrator
+// Improved: custom modals, expand-mode idle detection, artwork color extraction
 import { CONFIG } from './config.js';
 import { loadState, saveState, getState } from './storage.js';
 import { initPlayer, loadTrack, togglePlay, nextTrack, prevTrack, seekBy, seekTo, setVolume, getVolume, isPlaying, getCurrentTrack, getCurrentIndex, getTracks, setTracks, getDuration } from './player.js';
 import { initExplorer, filterByMood, getRandomTrack } from './explorer.js';
 import { searchTracks } from './search.js';
 import { createPlaylist, renamePlaylist, deletePlaylist, addToPlaylist, getAllPlaylists, exportPlaylist, importPlaylist } from './playlist.js';
-import { initVisualizer, startVisualizer, stopVisualizer, setExpandMode, resize as resizeVisualizer } from './visualizer.js';
+import { initVisualizer, startVisualizer, stopVisualizer, setExpandMode, setParticleColor, resize as resizeVisualizer } from './visualizer.js';
 import { renderTrackCard, updateTrackCardActive, renderMoodPills, showToast, updateNowPlaying, updatePlayPauseBtn, updateProgress, formatTime, icons } from './ui.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -16,12 +17,15 @@ let isExpanded = false;
 let searchQuery = '';
 let isDragging = false;
 
+// Expand-mode idle detection
+let _expandIdleTimer = null;
+let _expandMoveHandler = null;
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 async function boot() {
   const state = loadState();
   applyTheme(state.theme || 'zen-dark');
 
-  // Canvas visualizer — defer one frame so CSS layout has applied
   const canvas = document.getElementById('particle-canvas');
   if (canvas) {
     initVisualizer(canvas);
@@ -31,11 +35,6 @@ async function boot() {
   try {
     const res = await fetch(CONFIG.DATA_URL);
     const raw = await res.json();
-
-    // ── FIX #1: meditation.json has NO id field on any track.
-    //    Without IDs every findIndex call returns 0 (undefined === undefined is
-    //    true for all entries), so every play click loads track 0.
-    //    Assign stable string IDs based on array position at load time.
     allTracks = raw.map((t, i) => ({
       ...t,
       id: t.id != null ? String(t.id) : String(i),
@@ -60,10 +59,12 @@ async function boot() {
   renderMoodPills(document.getElementById('mood-pills'), CONFIG.MOODS, currentMood, onMoodClick);
   renderTrackList(displayedTracks);
 
-  // Restore last track display (no autoplay)
   if (state.lastTrackId) {
     const track = allTracks.find(t => t.id === state.lastTrackId);
-    if (track) updateNowPlaying(track, false);
+    if (track) {
+      updateNowPlaying(track, false);
+      extractAndApplyColor(track);
+    }
   }
 
   bindPlayerControls(state);
@@ -72,13 +73,67 @@ async function boot() {
   bindThemeControls(state.theme || 'zen-dark');
   bindPlaylistUI();
   bindKeyboard();
+  injectModalDOM();
 
   if (state.expandMode) activateExpand(false);
 
-  // Low power mode detection
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) {
     saveState({ lowPowerMode: true });
   }
+}
+
+// ─── Color extraction from artwork ───────────────────────────────────────────
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function extractAndApplyColor(track) {
+  const src = track?.image_url?.low || track?.image_url?.high;
+  if (!src) return;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const cv = document.createElement('canvas');
+      cv.width = 40; cv.height = 40;
+      const c = cv.getContext('2d');
+      c.drawImage(img, 0, 0, 40, 40);
+      const px = c.getImageData(0, 0, 40, 40).data;
+
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < px.length; i += 20) { // sample every 5th pixel
+        // Skip very dark or very white pixels — they skew the color
+        const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        if (lum < 20 || lum > 230) continue;
+        r += px[i]; g += px[i + 1]; b += px[i + 2]; n++;
+      }
+      if (!n) return;
+      r = Math.floor(r / n); g = Math.floor(g / n); b = Math.floor(b / n);
+
+      const [hue, sat, lit] = rgbToHsl(r, g, b);
+      // Clamp saturation up so particles always feel vivid
+      const clampedSat = Math.max(45, Math.min(90, sat));
+      const clampedLit = Math.max(55, Math.min(80, lit + 15));
+      setParticleColor(hue, clampedSat, clampedLit);
+    } catch (e) {
+      // CORS block — keep existing color
+    }
+  };
+  img.src = src;
 }
 
 // ─── Track list rendering ─────────────────────────────────────────────────────
@@ -95,15 +150,11 @@ function renderTrackList(tracks) {
   const currentTrack = getCurrentTrack();
   const activeId = currentTrack?.id;
 
-  // Batch render via DocumentFragment
   const frag = document.createDocumentFragment();
   tracks.forEach((track, i) => {
     const card = renderTrackCard(track, i, {
       active: track.id === activeId,
       onPlay: (t) => {
-        // ── FIX #2: always look up by stable ID, never by display index.
-        //    Previously used `idx` from the display list which could point to
-        //    a different global position after mood/search filtering.
         const globalIdx = allTracks.findIndex(at => at.id === t.id);
         if (globalIdx !== -1) loadTrack(globalIdx, true);
       },
@@ -123,6 +174,9 @@ function handleTrackChange(track) {
   if (container) updateTrackCardActive(container, track.id);
   const activeCard = container?.querySelector('.track-card.active');
   if (activeCard) activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Extract color from new track's artwork
+  extractAndApplyColor(track);
 }
 
 function handleProgress(current, duration) {
@@ -132,10 +186,9 @@ function handleProgress(current, duration) {
 function handlePlayerState(state) {
   if (state === 'play') {
     updatePlayPauseBtn(true);
-    startVisualizer(); // ensure visualizer is running during playback
+    startVisualizer();
   } else if (state === 'pause') {
     updatePlayPauseBtn(false);
-    // keep ambient particles running — stopVisualizer() is intentionally NOT called
   } else if (state === 'buffering') {
     const btn = document.getElementById('play-pause-btn');
     if (btn) btn.innerHTML = `<span class="spin">◌</span>`;
@@ -164,33 +217,25 @@ function bindPlayerControls(state) {
   const volSlider = document.getElementById('volume-slider');
   if (volSlider) {
     volSlider.value = (state.volume ?? 0.75) * 100;
-    volSlider.addEventListener('input', (e) => {
-      setVolume(e.target.value / 100);
-    });
+    volSlider.addEventListener('input', (e) => setVolume(e.target.value / 100));
   }
 
-  // Progress bar — click to seek
+  // Progress bar
   const progressBar = document.getElementById('progress-bar');
   if (progressBar) {
     progressBar.addEventListener('mousedown', () => { isDragging = true; });
     progressBar.addEventListener('touchstart', () => { isDragging = true; }, { passive: true });
-
     progressBar.addEventListener('click', (e) => {
       const rect = progressBar.getBoundingClientRect();
       const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      // ── FIX #3: read actual audio duration from player, not from DOM text.
       const dur = getDuration();
       if (dur && isFinite(dur)) seekTo(pct * dur);
       isDragging = false;
     });
-
     progressBar.addEventListener('mouseup', () => { isDragging = false; });
     progressBar.addEventListener('mouseleave', () => { isDragging = false; });
   }
 
-  // ── FIX #4: dhyaan:seek custom event (fired by expand overlay click)
-  //    Previously parsed duration from DOM text — brittle and broke on
-  //    tracks longer than 59:59. Now uses getDuration() directly.
   document.addEventListener('dhyaan:seek', (e) => {
     const dur = getDuration();
     if (dur && isFinite(dur)) seekTo(e.detail.pct * dur);
@@ -227,7 +272,7 @@ function bindPlayerControls(state) {
     if (!track) return;
     const idx = allTracks.findIndex(t => t.id === track.id);
     if (idx !== -1) loadTrack(idx, true);
-    showToast(`🎲 ${track.title}`);
+    showToast(`✦ ${track.title}`);
     setTimeout(() => {
       const container = document.getElementById('track-list');
       const card = container?.querySelector(`[data-id="${track.id}"]`);
@@ -290,21 +335,66 @@ function activateExpand(save = true) {
   setExpandMode(true);
   resizeVisualizer();
   if (save) saveState({ expandMode: true });
+
   const track = getCurrentTrack();
   if (track) {
     const expandImg = document.getElementById('expand-image');
     if (expandImg) {
-      expandImg.src = track.image_url?.high || CONFIG.FALLBACK_IMAGE;
+      expandImg.classList.remove('loaded');
+      expandImg.onload = () => expandImg.classList.add('loaded');
+      expandImg.onerror = () => {};
+      expandImg.src = track.image_url?.high || track.image_url?.low || '';
     }
   }
+
+  // Start idle detection — show controls briefly then fade
+  _setupExpandIdle();
 }
 
 function deactivateExpand() {
   isExpanded = false;
   document.body.classList.remove('expand-mode');
+  document.body.classList.remove('controls-visible');
   setExpandMode(false);
   resizeVisualizer();
   saveState({ expandMode: false });
+  _teardownExpandIdle();
+}
+
+// ── Idle detection for expand mode ──────────────────────────────────────────
+function _setupExpandIdle() {
+  _showExpandControls(); // flash visible on open
+
+  _expandMoveHandler = _throttle(() => _showExpandControls(), 100);
+  document.addEventListener('mousemove', _expandMoveHandler);
+  document.addEventListener('touchstart', _expandMoveHandler, { passive: true });
+  document.addEventListener('keydown', _expandMoveHandler);
+}
+
+function _teardownExpandIdle() {
+  clearTimeout(_expandIdleTimer);
+  if (_expandMoveHandler) {
+    document.removeEventListener('mousemove', _expandMoveHandler);
+    document.removeEventListener('touchstart', _expandMoveHandler);
+    document.removeEventListener('keydown', _expandMoveHandler);
+    _expandMoveHandler = null;
+  }
+}
+
+function _showExpandControls() {
+  document.body.classList.add('controls-visible');
+  clearTimeout(_expandIdleTimer);
+  _expandIdleTimer = setTimeout(() => {
+    document.body.classList.remove('controls-visible');
+  }, 3200);
+}
+
+function _throttle(fn, ms) {
+  let last = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now - last >= ms) { last = now; fn(...args); }
+  };
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -320,18 +410,133 @@ function bindThemeControls(currentTheme) {
       applyTheme(btn.dataset.themeBtn);
       saveState({ theme: btn.dataset.themeBtn });
       btns.forEach(b => b.classList.toggle('active', b === btn));
+      showToast(`Theme: ${btn.title}`);
     });
+  });
+}
+
+// ─── Modal system (replaces all prompt() / confirm() calls) ──────────────────
+function injectModalDOM() {
+  if (document.getElementById('dhyaan-modal-root')) return;
+  const root = document.createElement('div');
+  root.id = 'dhyaan-modal-root';
+  root.innerHTML = `
+    <div id="dhyaan-modal-backdrop">
+      <div id="dhyaan-modal-box" role="dialog" aria-modal="true">
+        <div id="dhyaan-modal-title"></div>
+        <div id="dhyaan-modal-body"></div>
+        <div id="dhyaan-modal-footer"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(root);
+}
+
+function openModal({ title = '', body = '', footer = '' } = {}) {
+  const backdrop = document.getElementById('dhyaan-modal-backdrop');
+  document.getElementById('dhyaan-modal-title').innerHTML = title;
+  document.getElementById('dhyaan-modal-body').innerHTML = body;
+  document.getElementById('dhyaan-modal-footer').innerHTML = footer;
+  backdrop.classList.add('open');
+
+  // Close on backdrop click
+  const close = (e) => {
+    if (e.target === backdrop) closeModal();
+  };
+  backdrop._closeHandler = close;
+  backdrop.addEventListener('click', close);
+}
+
+function closeModal() {
+  const backdrop = document.getElementById('dhyaan-modal-backdrop');
+  backdrop.classList.remove('open');
+  if (backdrop._closeHandler) {
+    backdrop.removeEventListener('click', backdrop._closeHandler);
+    backdrop._closeHandler = null;
+  }
+}
+
+/** Prompt-style modal — returns Promise<string|null> */
+function showInputModal({ title, placeholder = '', confirmLabel = 'Create' } = {}) {
+  return new Promise((resolve) => {
+    openModal({
+      title: `<span>${title}</span>`,
+      body: `<input id="dhyaan-modal-input" type="text" placeholder="${placeholder}" autocomplete="off" />`,
+      footer: `
+        <button id="dhyaan-modal-cancel" class="modal-btn-ghost">Cancel</button>
+        <button id="dhyaan-modal-confirm" class="modal-btn-accent">${confirmLabel}</button>
+      `,
+    });
+
+    const input = document.getElementById('dhyaan-modal-input');
+    input.focus();
+
+    const confirm = () => { closeModal(); resolve(input.value.trim() || null); };
+    const cancel  = () => { closeModal(); resolve(null); };
+
+    document.getElementById('dhyaan-modal-confirm').addEventListener('click', confirm);
+    document.getElementById('dhyaan-modal-cancel').addEventListener('click', cancel);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirm();
+      if (e.key === 'Escape') cancel();
+    });
+  });
+}
+
+/** Playlist-picker modal — returns Promise<string|null> (playlist id) */
+function showPickModal({ title, items /* [{id, label, sub}] */ } = {}) {
+  return new Promise((resolve) => {
+    const itemsHTML = items.length
+      ? items.map(it => `
+          <button class="modal-pick-item" data-id="${it.id}">
+            <span class="modal-pick-name">${it.label}</span>
+            <span class="modal-pick-sub">${it.sub || ''}</span>
+          </button>`).join('')
+      : `<p class="modal-empty-note">No playlists yet. Create one first.</p>`;
+
+    openModal({
+      title: `<span>${title}</span>`,
+      body: `<div class="modal-pick-list">${itemsHTML}</div>`,
+      footer: `<button id="dhyaan-modal-cancel" class="modal-btn-ghost">Cancel</button>`,
+    });
+
+    document.querySelectorAll('.modal-pick-item').forEach(btn => {
+      btn.addEventListener('click', () => { closeModal(); resolve(btn.dataset.id); });
+    });
+    document.getElementById('dhyaan-modal-cancel')?.addEventListener('click', () => {
+      closeModal(); resolve(null);
+    });
+  });
+}
+
+/** Confirm modal — returns Promise<boolean> */
+function showConfirmModal({ title, message, confirmLabel = 'Delete', danger = false } = {}) {
+  return new Promise((resolve) => {
+    openModal({
+      title: `<span>${title}</span>`,
+      body: `<p class="modal-confirm-msg">${message}</p>`,
+      footer: `
+        <button id="dhyaan-modal-cancel" class="modal-btn-ghost">Cancel</button>
+        <button id="dhyaan-modal-confirm" class="${danger ? 'modal-btn-danger' : 'modal-btn-accent'}">${confirmLabel}</button>
+      `,
+    });
+    document.getElementById('dhyaan-modal-confirm').addEventListener('click', () => { closeModal(); resolve(true); });
+    document.getElementById('dhyaan-modal-cancel').addEventListener('click', () => { closeModal(); resolve(false); });
   });
 }
 
 // ─── Playlist UI ──────────────────────────────────────────────────────────────
 function bindPlaylistUI() {
-  document.getElementById('new-playlist-btn')?.addEventListener('click', () => {
-    const name = prompt('Playlist name:');
+  document.getElementById('new-playlist-btn')?.addEventListener('click', async () => {
+    const name = await showInputModal({
+      title: 'New Playlist',
+      placeholder: 'Enter playlist name…',
+      confirmLabel: 'Create',
+    });
     if (!name) return;
     createPlaylist(name);
     renderPlaylistSidebar();
-    showToast(`Playlist "${name}" created`);
+    showToast(`✦ Playlist "${name}" created`);
   });
 
   renderPlaylistSidebar();
@@ -359,6 +564,7 @@ function renderPlaylistSidebar() {
         <button class="pl-delete" title="Delete">✕</button>
       </div>
     `;
+
     item.querySelector('.pl-export').addEventListener('click', () => {
       const json = exportPlaylist(pl.id, allTracks);
       if (json) {
@@ -369,23 +575,38 @@ function renderPlaylistSidebar() {
         a.download = `${pl.name}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        showToast(`Exported "${pl.name}"`);
       }
     });
-    item.querySelector('.pl-delete').addEventListener('click', () => {
-      if (confirm(`Delete "${pl.name}"?`)) {
+
+    item.querySelector('.pl-delete').addEventListener('click', async () => {
+      const ok = await showConfirmModal({
+        title: 'Delete Playlist',
+        message: `Delete "${pl.name}"? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      if (ok) {
         deletePlaylist(pl.id);
         renderPlaylistSidebar();
         showToast('Playlist deleted');
       }
     });
+
     container.appendChild(item);
   });
 }
 
-function showAddToPlaylistModal(track) {
+async function showAddToPlaylistModal(track) {
   const playlists = getAllPlaylists();
+
   if (!playlists.length) {
-    const name = prompt('No playlists found. Create one:');
+    // No playlists — offer to create one inline
+    const name = await showInputModal({
+      title: 'Create a Playlist',
+      placeholder: 'Playlist name…',
+      confirmLabel: 'Create & Add',
+    });
     if (!name) return;
     const pl = createPlaylist(name);
     addToPlaylist(pl.id, track.id);
@@ -393,20 +614,36 @@ function showAddToPlaylistModal(track) {
     showToast(`Added to "${pl.name}"`);
     return;
   }
-  const names = playlists.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
-  const choice = prompt(`Add to playlist:\n${names}\n\nEnter number:`);
-  const idx = parseInt(choice) - 1;
-  if (idx >= 0 && idx < playlists.length) {
-    addToPlaylist(playlists[idx].id, track.id);
-    renderPlaylistSidebar();
-    showToast(`Added to "${playlists[idx].name}"`);
-  }
+
+  const picked = await showPickModal({
+    title: 'Add to Playlist',
+    items: playlists.map(p => ({
+      id: p.id,
+      label: p.name,
+      sub: `${p.trackIds.length} tracks`,
+    })),
+  });
+
+  if (!picked) return;
+  const pl = playlists.find(p => p.id === picked);
+  if (!pl) return;
+
+  // Prevent duplicate (addToPlaylist already guards, but show feedback either way)
+  const wasAlready = pl.trackIds.includes(track.id);
+  addToPlaylist(pl.id, track.id);
+  renderPlaylistSidebar();
+  showToast(wasAlready ? `Already in "${pl.name}"` : `Added to "${pl.name}"`);
 }
 
 // ─── Keyboard shortcuts ───────────────────────────────────────────────────────
 function bindKeyboard() {
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
+    // Modal open — only Escape
+    if (document.getElementById('dhyaan-modal-backdrop')?.classList.contains('open')) {
+      if (e.key === 'Escape') closeModal();
+      return;
+    }
     switch (e.code) {
       case 'Space': e.preventDefault(); togglePlay().then(() => updatePlayPauseBtn(isPlaying())); break;
       case 'ArrowRight': e.preventDefault(); seekBy(CONFIG.SEEK_SECONDS); break;

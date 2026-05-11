@@ -79,6 +79,9 @@
         <div class="theme-dot" data-theme-btn="cosmic-purple" title="Cosmic Purple" role="button" tabindex="0"></div>
         <div class="theme-dot" data-theme-btn="forest-calm" title="Forest Calm" role="button" tabindex="0"></div>
         <div class="theme-dot" data-theme-btn="spiritual-green" title="Spiritual Green" role="button" tabindex="0"></div>
+        <div class="theme-dot" data-theme-btn="sunset-gold" title="Sunset Gold" role="button" tabindex="0"></div>
+        <div class="theme-dot" data-theme-btn="rose-pink" title="Rose Pink" role="button" tabindex="0"></div>
+        <div class="theme-dot" data-theme-btn="moonlight" title="Moonlight Silver" role="button" tabindex="0"></div>
       </div>
     </div>
   </header>
@@ -207,54 +210,47 @@
 <script type="module" src="./js/app.js"></script>
 
 <script>
-  // Sync expand overlay with player for UI elements
   document.addEventListener('DOMContentLoaded', () => {
-    // Wire expand overlay prev/next/play to player controls
-    document.getElementById('expand-prev')?.addEventListener('click', () => {
-      document.getElementById('prev-btn')?.click();
-    });
-    document.getElementById('expand-next')?.addEventListener('click', () => {
-      document.getElementById('next-btn')?.click();
-    });
-    document.getElementById('expand-play-btn')?.addEventListener('click', () => {
-      document.getElementById('play-pause-btn')?.click();
-    });
+    // Expand overlay prev/next/play — delegate to main player controls
+    document.getElementById('expand-prev')?.addEventListener('click', () =>
+      document.getElementById('prev-btn')?.click());
+    document.getElementById('expand-next')?.addEventListener('click', () =>
+      document.getElementById('next-btn')?.click());
+    document.getElementById('expand-play-btn')?.addEventListener('click', () =>
+      document.getElementById('play-pause-btn')?.click());
 
-    // Sync expand progress bar
-    const observer = new MutationObserver(() => {
-      const filled = document.getElementById('progress-filled');
-      const expandFilled = document.getElementById('expand-filled');
-      if (filled && expandFilled) {
-        expandFilled.style.width = filled.style.width;
-      }
-      // Sync time labels
-      const ct = document.getElementById('current-time')?.textContent;
-      const dur = document.getElementById('duration')?.textContent;
-      if (ct) document.getElementById('expand-current').textContent = ct;
-      if (dur) document.getElementById('expand-duration').textContent = dur;
-      // Sync track info in expand overlay
-      const title = document.getElementById('np-title')?.textContent;
-      const moods = document.getElementById('np-moods')?.textContent;
-      if (title) document.getElementById('expand-title').textContent = title;
-      if (moods) document.getElementById('expand-moods').textContent = moods;
-    });
-
+    // Sync expand progress/time/track-info from player via MutationObserver
     const progressFilled = document.getElementById('progress-filled');
     if (progressFilled) {
-      observer.observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
+      const syncUI = () => {
+        const w = progressFilled.style.width;
+        const expandFilled = document.getElementById('expand-filled');
+        if (expandFilled) expandFilled.style.width = w;
+
+        const ct  = document.getElementById('current-time')?.textContent;
+        const dur = document.getElementById('duration')?.textContent;
+        if (ct)  document.getElementById('expand-current').textContent = ct;
+        if (dur) document.getElementById('expand-duration').textContent = dur;
+
+        const title = document.getElementById('np-title')?.textContent;
+        const moods = document.getElementById('np-moods')?.textContent;
+        if (title) document.getElementById('expand-title').textContent = title;
+        if (moods) document.getElementById('expand-moods').textContent = moods;
+      };
+      new MutationObserver(syncUI).observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
     }
 
-    // Expand progress click
+    // Expand progress bar click-to-seek
     document.getElementById('expand-progress-bar')?.addEventListener('click', (e) => {
       const bar = document.getElementById('expand-progress-bar');
-      const pct = (e.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth;
+      const pct = Math.max(0, Math.min(1, (e.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth));
       document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
     });
 
-    // Theme dot keyboard support
+    // Theme dot keyboard accessibility
     document.querySelectorAll('.theme-dot').forEach(dot => {
       dot.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') dot.click();
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dot.click(); }
       });
     });
   });
