@@ -1,6 +1,6 @@
 // ui.js — UI rendering and DOM helpers
 import { CONFIG } from './config.js';
-import { isFavorite, toggleFavorite } from './storage.js';
+import { isFavorite, toggleFavorite, getState } from './storage.js';
 
 export function formatTime(sec) {
   if (!sec || isNaN(sec)) return '0:00';
@@ -10,14 +10,8 @@ export function formatTime(sec) {
 }
 
 export function renderTrackCard(track, index, opts = {}) {
-  const { active = false, onPlay, onFavorite, onAddToPlaylist, onRemoveFromPlaylist } = opts;
+  const { active = false, onPlay, onFavorite, onAddToPlaylist } = opts;
   const fav = isFavorite(track.id);
-
-  const isRemoveMode = typeof onRemoveFromPlaylist === 'function';
-  const plBtnTitle = isRemoveMode ? 'Remove from playlist' : 'Add to playlist';
-  const plBtnIcon = isRemoveMode ? icons.close : icons.plus;
-  const plBtnExtraClass = isRemoveMode ? ' remove-pl-btn' : '';
-
   const card = document.createElement('div');
   card.className = `track-card${active ? ' active' : ''}`;
   card.dataset.id = track.id;
@@ -28,7 +22,6 @@ export function renderTrackCard(track, index, opts = {}) {
       <img
         alt="${track.title}"
         class="track-img"
-        draggable="false"
       />
       <div class="track-play-overlay">
         <button class="track-play-btn" aria-label="Play ${track.title}">
@@ -46,13 +39,17 @@ export function renderTrackCard(track, index, opts = {}) {
       <button class="icon-btn fav-btn ${fav ? 'active' : ''}" title="Favorite" aria-label="${fav ? 'Remove from favorites' : 'Add to favorites'}">
         ${fav ? icons.heartFilled : icons.heart}
       </button>
-      <button class="icon-btn add-pl-btn${plBtnExtraClass}" title="${plBtnTitle}" aria-label="${plBtnTitle}">
-        ${plBtnIcon}
+      <button class="icon-btn add-pl-btn" title="Add to playlist" aria-label="Add to playlist">
+        ${icons.plus}
+      </button>
+      <button class="icon-btn dl-btn" title="Download" aria-label="Download ${track.title}" data-audio-url="${track.audio_url}" data-title="${track.title}">
+        ${icons.download}
       </button>
     </div>
   `;
 
-  // Lazy load image
+  // ── FIX: Lazy load image — assign onload/onerror BEFORE setting src to
+  //    avoid a cache race condition where load fires before handler is bound.
   const img = card.querySelector('.track-img');
   const lowSrc = track.image_url?.low || null;
   const highSrc = track.image_url?.high || null;
@@ -61,9 +58,13 @@ export function renderTrackCard(track, index, opts = {}) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
         io.disconnect();
-        if (!lowSrc) return;
+        if (!lowSrc) return; // no image URL — stay invisible
+        // Assign handlers first, THEN src
         img.onload = () => img.classList.add('loaded');
-        img.onerror = () => img.removeAttribute('src');
+        img.onerror = () => {
+          // Image failed (404 or CORS); stay invisible — no broken icon
+          img.removeAttribute('src');
+        };
         img.src = lowSrc;
       }
     }
@@ -77,7 +78,10 @@ export function renderTrackCard(track, index, opts = {}) {
       img.dataset.hiLoaded = '1';
       const hi = new Image();
       hi.onload = () => {
-        if (img.classList.contains('loaded')) img.src = highSrc;
+        // Only swap if the low-res is already shown
+        if (img.classList.contains('loaded')) {
+          img.src = highSrc;
+        }
       };
       hi.src = highSrc;
     }, { once: true });
@@ -103,10 +107,41 @@ export function renderTrackCard(track, index, opts = {}) {
 
   card.querySelector('.add-pl-btn').addEventListener('click', (e) => {
     e.stopPropagation();
-    if (isRemoveMode) {
-      onRemoveFromPlaylist(track);
-    } else {
-      onAddToPlaylist && onAddToPlaylist(track);
+    onAddToPlaylist && onAddToPlaylist(track);
+  });
+
+  // ── FIX: Download via fetch + Blob so cross-origin GitHub raw URLs actually
+  //    download instead of navigating (browsers block the `download` attribute
+  //    on cross-origin anchors).
+  card.querySelector('.dl-btn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const url = btn.dataset.audioUrl;
+    const title = btn.dataset.title || 'track';
+    if (!url) return;
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = `<span class="spin">◌</span>`;
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${title}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err) {
+      console.warn('Download failed, falling back to open in new tab:', err);
+      window.open(url, '_blank', 'noopener');
+    } finally {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
     }
   });
 
@@ -158,6 +193,7 @@ export function updateNowPlaying(track, playing) {
   if (titleEl) titleEl.textContent = track.title;
   if (moodsEl) moodsEl.textContent = (track.moods || []).join(' · ') || '―';
 
+  // ── FIX: assign onload before src (same race-condition fix as track cards)
   if (imgEl) {
     imgEl.classList.remove('loaded');
     imgEl.onload = () => imgEl.classList.add('loaded');
@@ -198,8 +234,8 @@ export const icons = {
   prev: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>`,
   heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   heartFilled: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>`,
   plus: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
-  close: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`,
   shuffle: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>`,
   repeat: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>`,
   repeatOne: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>`,
@@ -207,5 +243,6 @@ export const icons = {
   collapse: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`,
   random: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93V18h2v1.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.22.21-1.79L7 11v1c0 2.76 2.24 5 5 5v-1l3.78 3.78c-.97.36-2.02.54-3.1.54-.58 0-1.15-.06-1.68-.17V19.93z"/></svg>`,
   playlist: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>`,
 };
