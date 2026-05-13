@@ -1,4 +1,4 @@
-/* main.css — Dhyaan Meditation App — Fully Polished Edition */
+/* main.css — Dhyaan Meditation App — Mobile-Optimized Edition */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
 @import './themes.css';
 
@@ -93,9 +93,7 @@ body::before {
   flex-shrink: 0;
 }
 
-.logo:hover {
-  text-shadow: 0 0 30px var(--accent-glow-strong);
-}
+.logo:hover { text-shadow: 0 0 30px var(--accent-glow-strong); }
 
 .logo-glyph {
   font-size: clamp(1.2rem, 2.5vw, 1.6rem);
@@ -200,19 +198,23 @@ body::before {
 }
 #search-clear:hover { color: var(--accent-1); }
 
-/* ── Mobile menu button (hidden on desktop) ──────────────────────────────── */
+/* ── Mobile menu button ───────────────────────────────────────────────────── */
 #mobile-menu-btn {
   display: none;
   background: none;
   border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   border-radius: 10px;
   align-items: center;
   justify-content: center;
   transition: all 0.18s;
   flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 #mobile-menu-btn svg { width: 20px; height: 20px; display: block; }
 #mobile-menu-btn:hover {
@@ -234,9 +236,7 @@ body::before {
   scrollbar-color: var(--border) transparent;
 }
 
-.sidebar-section {
-  padding: 0 18px 24px;
-}
+.sidebar-section { padding: 0 18px 24px; }
 
 .sidebar-label {
   font-family: 'DM Mono', monospace;
@@ -255,11 +255,13 @@ body::before {
   border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 3px 9px;
+  padding: 6px 12px;
   border-radius: 6px;
   font-family: 'DM Mono', monospace;
   font-size: 0.6rem;
   transition: all 0.18s;
+  min-height: 32px;
+  touch-action: manipulation;
 }
 #new-playlist-btn:hover {
   color: var(--accent-1);
@@ -272,12 +274,14 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 10px;
+  padding: 11px 10px;
   border-radius: 10px;
   cursor: pointer;
   transition: background 0.18s;
   margin-bottom: 4px;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
 }
 .pl-item:hover { background: var(--bg-hover); }
 
@@ -311,10 +315,15 @@ body::before {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.75rem;
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-radius: 4px;
   transition: all 0.15s;
   touch-action: manipulation;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .pl-actions button:hover { color: var(--accent-1); background: var(--accent-glow); }
 
@@ -325,8 +334,7 @@ body::before {
   padding: 8px 0;
 }
 
-/* ── Mobile Sidebar (bottom sheet) ───────────────────────────────────────── */
-/* Mobile-only overlay backdrop */
+/* ── Mobile Sidebar backdrop ──────────────────────────────────────────────── */
 #mobile-sidebar-backdrop {
   display: none;
   position: fixed;
@@ -363,7 +371,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: clamp(5px, 1.2vw, 7px) clamp(10px, 2vw, 14px);
+  padding: clamp(6px, 1.2vw, 8px) clamp(10px, 2vw, 14px);
   border-radius: 100px;
   border: 1px solid var(--border);
   background: var(--bg-card);
@@ -377,6 +385,8 @@ body::before {
   white-space: nowrap;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  min-height: 36px;
+  flex-shrink: 0;
 }
 
 .mood-pill:hover {
@@ -469,9 +479,15 @@ body::before {
 .track-card:hover .track-play-overlay,
 .track-card.active .track-play-overlay { opacity: 1; }
 
+/* Touch devices: always show play overlay for active cards, show on tap for others */
+@media (pointer: coarse) {
+  .track-card.active .track-play-overlay { opacity: 1; }
+  .track-card:active .track-play-overlay { opacity: 1; }
+}
+
 .track-play-btn {
-  width: clamp(42px, 6vw, 50px);
-  height: clamp(42px, 6vw, 50px);
+  width: clamp(44px, 6vw, 52px);
+  height: clamp(44px, 6vw, 52px);
   border-radius: 50%;
   border: 2px solid var(--accent-1);
   background: rgba(0,0,0,0.55);
@@ -483,6 +499,7 @@ body::before {
   transition: all 0.2s;
   backdrop-filter: blur(10px);
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .track-play-btn:hover {
   background: var(--accent-1);
@@ -522,7 +539,7 @@ body::before {
   display: flex;
   align-items: center;
   padding: 8px clamp(10px, 2vw, 14px) clamp(10px, 2vw, 14px);
-  gap: 8px;
+  gap: 4px;
 }
 
 .icon-btn {
@@ -530,7 +547,7 @@ body::before {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 7px;
+  padding: 8px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -539,6 +556,8 @@ body::before {
   text-decoration: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  min-width: 36px;
+  min-height: 36px;
 }
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 .icon-btn:hover { color: var(--accent-1); background: var(--accent-glow); }
@@ -570,13 +589,24 @@ body::before {
   position: sticky;
   bottom: 0;
   z-index: 100;
+  /* Safe area for home indicator */
+  padding-bottom: calc(clamp(10px, 2vw, 14px) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Player top row (now-playing section) ─────────────────────────────────── */
+.player-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 260px;
+  min-width: 0;
 }
 
 .np-info {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex: 0 0 260px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -604,7 +634,7 @@ body::before {
 }
 #np-image.loaded { opacity: 1; }
 
-.np-text { min-width: 0; }
+.np-text { min-width: 0; flex: 1; }
 
 #np-title {
   font-size: clamp(0.88rem, 1.8vw, 1rem);
@@ -648,7 +678,7 @@ body::before {
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: clamp(6px, 1.5vw, 8px);
+  padding: clamp(8px, 1.5vw, 10px);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -656,14 +686,16 @@ body::before {
   transition: all 0.18s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  min-width: 40px;
+  min-height: 40px;
 }
 .ctrl-btn svg { width: 20px; height: 20px; display: block; }
 .ctrl-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
 .ctrl-btn.active { color: var(--accent-1); }
 
 #play-pause-btn {
-  width: clamp(42px, 6vw, 48px);
-  height: clamp(42px, 6vw, 48px);
+  width: clamp(46px, 6vw, 52px);
+  height: clamp(46px, 6vw, 52px);
   border-radius: 50%;
   background: var(--accent-1);
   color: var(--text-on-accent);
@@ -691,8 +723,10 @@ body::before {
   border-radius: 6px;
   gap: 2px;
   color: var(--text-muted);
+  min-width: unset;
 }
 
+/* Progress bar — enlarged touch target */
 .progress-wrap {
   width: 100%;
   display: flex;
@@ -717,6 +751,10 @@ body::before {
   cursor: pointer;
   position: relative;
   transition: height 0.2s;
+  /* Larger touch target via pseudo-element padding */
+  padding: 12px 0;
+  margin: -12px 0;
+  touch-action: none;
 }
 #progress-bar:hover { height: 6px; }
 
@@ -728,6 +766,8 @@ body::before {
   position: relative;
   transition: width 0.2s linear;
   box-shadow: 0 0 10px var(--accent-glow-strong);
+  /* Fix: fill inside the actual bar, not the padded area */
+  pointer-events: none;
 }
 
 #progress-filled::after {
@@ -806,13 +846,15 @@ body::before {
   border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
 }
 #expand-btn svg { width: 20px; height: 20px; display: block; }
 #expand-btn:hover {
@@ -885,7 +927,7 @@ body.expand-mode #particle-canvas {
   border: 1px solid rgba(255,255,255,0.15);
   color: rgba(255,255,255,0.7);
   cursor: pointer;
-  padding: 10px;
+  padding: 12px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -901,6 +943,11 @@ body.expand-mode #particle-canvas {
   transform: translateY(-12px);
   pointer-events: none;
   touch-action: manipulation;
+  min-width: 48px;
+  min-height: 48px;
+  /* Safe area: below notch */
+  top: calc(clamp(16px, 3vw, 24px) + env(safe-area-inset-top, 0px));
+  right: calc(clamp(16px, 3vw, 24px) + env(safe-area-inset-right, 0px));
 }
 #collapse-btn svg { width: 22px; height: 22px; display: block; }
 #collapse-btn:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
@@ -911,12 +958,12 @@ body.expand-mode #particle-canvas {
   left: 0;
   right: 0;
   z-index: 2;
-  padding: clamp(24px, 4vw, 40px) clamp(20px, 4vw, 40px) clamp(36px, 5vw, 50px);
+  padding: clamp(24px, 4vw, 40px) clamp(20px, 4vw, 40px) calc(clamp(36px, 5vw, 50px) + env(safe-area-inset-bottom, 0px));
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(16px, 3vw, 24px);
+  gap: clamp(14px, 3vw, 24px);
   opacity: 0;
   transform: translateY(28px);
   pointer-events: none;
@@ -937,7 +984,7 @@ body.expand-mode.controls-visible #collapse-btn {
   pointer-events: all;
 }
 
-.expand-track-info { margin-bottom: 4px; }
+.expand-track-info { margin-bottom: 4px; width: 100%; }
 
 #expand-title {
   font-size: clamp(1.4rem, 5vw, 2.8rem);
@@ -972,6 +1019,10 @@ body.expand-mode.controls-visible #collapse-btn {
   border-radius: 100px;
   cursor: pointer;
   transition: height 0.2s;
+  /* Larger touch target */
+  padding: 14px 0;
+  margin: -14px 0;
+  touch-action: none;
 }
 .expand-progress-bar:hover { height: 5px; }
 
@@ -982,6 +1033,7 @@ body.expand-mode.controls-visible #collapse-btn {
   border-radius: 100px;
   transition: width 0.2s linear;
   box-shadow: 0 0 10px rgba(255,255,255,0.4);
+  pointer-events: none;
 }
 
 .expand-time {
@@ -1002,20 +1054,23 @@ body.expand-mode.controls-visible #collapse-btn {
   border: none;
   color: rgba(255,255,255,0.6);
   cursor: pointer;
-  padding: 12px;
+  padding: 14px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 52px;
+  min-height: 52px;
 }
-.expand-ctrl-btn svg { width: clamp(22px, 4vw, 26px); height: clamp(22px, 4vw, 26px); display: block; }
+.expand-ctrl-btn svg { width: clamp(24px, 4vw, 28px); height: clamp(24px, 4vw, 28px); display: block; }
 .expand-ctrl-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
 #expand-play-btn {
-  width: clamp(56px, 10vw, 68px);
-  height: clamp(56px, 10vw, 68px);
+  width: clamp(60px, 10vw, 72px);
+  height: clamp(60px, 10vw, 72px);
   border-radius: 50%;
   background: rgba(255,255,255,0.12);
   border: 1.5px solid rgba(255,255,255,0.35);
@@ -1027,6 +1082,7 @@ body.expand-mode.controls-visible #collapse-btn {
   justify-content: center;
   transition: all 0.22s;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 #expand-play-btn:hover {
   background: rgba(255,255,255,0.22);
@@ -1034,7 +1090,23 @@ body.expand-mode.controls-visible #collapse-btn {
   transform: scale(1.06);
   box-shadow: 0 0 30px rgba(255,255,255,0.2);
 }
-#expand-play-btn svg { width: 28px; height: 28px; display: block; }
+#expand-play-btn svg { width: 30px; height: 30px; display: block; }
+
+/* ── Expand mode — swipe hint (mobile only) ──────────────────────────────── */
+.expand-swipe-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.2);
+  text-transform: uppercase;
+  display: none;
+  animation: fadePulse 3s ease-in-out infinite;
+}
+
+@keyframes fadePulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
 
 /* ── Modal system ─────────────────────────────────────────────────────────── */
 #dhyaan-modal-root {
@@ -1100,16 +1172,14 @@ body.expand-mode.controls-visible #collapse-btn {
   text-shadow: 0 0 20px var(--accent-glow-strong);
 }
 
-#dhyaan-modal-body {
-  margin-bottom: 24px;
-}
+#dhyaan-modal-body { margin-bottom: 24px; }
 
 #dhyaan-modal-input {
   width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   color: var(--text-primary);
   font-family: 'Cormorant Garamond', serif;
   font-size: 1rem;
@@ -1136,7 +1206,7 @@ body.expand-mode.controls-visible #collapse-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 14px 16px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1144,6 +1214,7 @@ body.expand-mode.controls-visible #collapse-btn {
   transition: all 0.18s;
   text-align: left;
   touch-action: manipulation;
+  min-height: 52px;
 }
 .modal-pick-item:hover {
   border-color: var(--accent-1);
@@ -1186,7 +1257,7 @@ body.expand-mode.controls-visible #collapse-btn {
 }
 
 .modal-btn-ghost, .modal-btn-accent, .modal-btn-danger {
-  padding: 10px 22px;
+  padding: 12px 22px;
   border-radius: 100px;
   font-family: 'DM Mono', monospace;
   font-size: 0.72rem;
@@ -1195,6 +1266,7 @@ body.expand-mode.controls-visible #collapse-btn {
   border: none;
   transition: all 0.2s;
   touch-action: manipulation;
+  min-height: 44px;
 }
 
 .modal-btn-ghost {
@@ -1219,9 +1291,7 @@ body.expand-mode.controls-visible #collapse-btn {
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
-.modal-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.25);
-}
+.modal-btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .dhyaan-toast {
@@ -1293,10 +1363,7 @@ kbd {
   text-shadow: 0 0 12px var(--accent-glow);
 }
 
-.pl-rename {
-  font-size: 0.85rem;
-  line-height: 1;
-}
+.pl-rename { font-size: 0.85rem; line-height: 1; }
 
 .playlist-view-header {
   display: flex;
@@ -1322,10 +1389,12 @@ kbd {
   border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 10px;
   transition: color 0.18s, border-color 0.18s, box-shadow 0.18s, background 0.18s;
   touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .pl-back-btn:hover {
@@ -1431,14 +1500,13 @@ kbd {
   50% { box-shadow: 0 0 28px var(--accent-glow-strong), 0 0 8px var(--accent-glow); }
 }
 
-/* ── About modal — spiritual content ──────────────────────────────────────── */
+/* ── About modal ──────────────────────────────────────────────────────────── */
 .about-modal-wrap {
   position: relative;
   overflow: hidden;
   min-height: 280px;
 }
 
-/* Particle canvas inside about modal */
 .about-particle-canvas {
   position: absolute;
   inset: 0;
@@ -1489,10 +1557,7 @@ kbd {
   z-index: 1;
 }
 
-.about-text em {
-  color: var(--accent-1);
-  font-style: italic;
-}
+.about-text em { color: var(--accent-1); font-style: italic; }
 
 .about-footer-text {
   font-family: 'DM Mono', monospace;
@@ -1502,10 +1567,6 @@ kbd {
   text-align: center;
   margin-top: 8px;
   opacity: 0.6;
-}
-
-#dhyaan-modal-backdrop.open .dhyaan-modal-box-extra.about-modal {
-  max-width: 520px;
 }
 
 /* ── Expand mode recommendations ─────────────────────────────────────────── */
@@ -1538,7 +1599,7 @@ kbd {
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  width: 80px;
+  width: 82px;
   transition: all 0.22s;
   display: flex;
   flex-direction: column;
@@ -1546,6 +1607,7 @@ kbd {
   gap: 6px;
   padding-bottom: 8px;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .expand-reco-item:hover {
@@ -1555,8 +1617,8 @@ kbd {
 }
 
 .expand-reco-thumb {
-  width: 80px;
-  height: 50px;
+  width: 82px;
+  height: 52px;
   background-size: cover;
   background-position: center;
   background-color: rgba(255,255,255,0.05);
@@ -1594,23 +1656,19 @@ body.low-power .track-card { animation: none; }
 body.low-power * { transition-duration: 0.05s !important; }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVE — Complete rework
+   MOBILE RESPONSIVE
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Tablet (≤900px) ─────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  #app {
-    grid-template-columns: 220px 1fr;
-  }
-
-  .np-info { flex: 0 0 200px; }
-
+  #app { grid-template-columns: 220px 1fr; }
+  .player-top-row { flex: 0 0 200px; }
   .ctrl-btn.seek-btn { display: none; }
 }
 
 /* ── Mobile (≤768px) ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Grid: no sidebar column */
+  /* Grid: remove sidebar column */
   #app {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -1619,7 +1677,7 @@ body.low-power * { transition-duration: 0.05s !important; }
       "player";
   }
 
-  /* Sidebar becomes a slide-in drawer from the left */
+  /* Sidebar: slide-in drawer */
   #sidebar {
     position: fixed;
     top: 0;
@@ -1629,14 +1687,12 @@ body.low-power * { transition-duration: 0.05s !important; }
     z-index: 210;
     transform: translateX(-100%);
     transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-    padding-top: 64px; /* space for close button */
+    padding-top: calc(64px + env(safe-area-inset-top, 0px));
     border-right: 1px solid var(--border-hover);
     box-shadow: 4px 0 40px rgba(0,0,0,0.5);
   }
 
-  #sidebar.open {
-    transform: translateX(0);
-  }
+  #sidebar.open { transform: translateX(0); }
 
   #mobile-sidebar-backdrop {
     display: block;
@@ -1658,24 +1714,26 @@ body.low-power * { transition-duration: 0.05s !important; }
   #sidebar-close-btn {
     display: flex;
     position: absolute;
-    top: 14px;
+    top: calc(14px + env(safe-area-inset-top, 0px));
     right: 14px;
     background: var(--bg-hover);
     border: 1px solid var(--border);
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     border-radius: 10px;
     align-items: center;
     justify-content: center;
     transition: all 0.18s;
     touch-action: manipulation;
     z-index: 1;
+    min-width: 44px;
+    min-height: 44px;
   }
   #sidebar-close-btn svg { width: 18px; height: 18px; display: block; }
   #sidebar-close-btn:hover { color: var(--accent-1); border-color: var(--accent-1); }
 
-  /* Sidebar header inside drawer */
+  /* Sidebar mobile header */
   #sidebar-header-mobile {
     display: block;
     padding: 16px 18px 8px;
@@ -1689,7 +1747,7 @@ body.low-power * { transition-duration: 0.05s !important; }
     margin-bottom: 16px;
   }
 
-  /* Mobile theme panel in sidebar */
+  /* Mobile theme panel */
   #mobile-theme-panel {
     display: block;
     padding: 0 18px 20px;
@@ -1719,11 +1777,14 @@ body.low-power * { transition-duration: 0.05s !important; }
     gap: 6px;
     cursor: pointer;
     touch-action: manipulation;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background 0.18s;
   }
 
   .mobile-theme-swatch {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: 2px solid transparent;
     transition: transform 0.2s, border-color 0.2s;
@@ -1731,7 +1792,7 @@ body.low-power * { transition-duration: 0.05s !important; }
 
   .mobile-theme-item:hover .mobile-theme-swatch,
   .mobile-theme-item.active .mobile-theme-swatch {
-    transform: scale(1.2);
+    transform: scale(1.15);
     border-color: var(--text-primary);
     box-shadow: 0 0 8px var(--accent-glow-strong);
   }
@@ -1745,43 +1806,74 @@ body.low-power * { transition-duration: 0.05s !important; }
     line-height: 1.2;
   }
 
-  /* Show mobile menu button in header */
+  /* Show mobile menu button */
   #mobile-menu-btn { display: flex; }
 
-  /* Hide desktop theme switcher in header on mobile */
+  /* Hide desktop theme switcher */
   .theme-switcher { display: none; }
 
-  /* Header layout on mobile */
-  #header { gap: 10px; }
+  /* Header safe area + padding */
+  #header {
+    gap: 10px;
+    padding-top: calc(clamp(12px, 2vw, 18px) + env(safe-area-inset-top, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
 
   .search-wrap { max-width: 100%; flex: 1; }
 
-  /* Main padding */
-  #main { padding: 16px; }
+  /* Main */
+  #main {
+    padding: 16px max(16px, env(safe-area-inset-left, 0px));
+  }
 
-  /* Track grid single column on mobile */
-  #track-list { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  /* Mood pills: horizontally scrollable on mobile */
+  #mood-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+    margin-bottom: 18px;
+    /* Fade edges */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+    padding-left: 4px;
+    padding-right: 4px;
+    gap: 6px;
+  }
+  #mood-pills::-webkit-scrollbar { display: none; }
 
-  /* Player bar: restructure for mobile */
+  /* Track grid */
+  #track-list {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  /* Always show play overlay on touch — active card */
+  .track-card.active .track-play-overlay { opacity: 1; }
+
+  /* Player bar */
   #player {
     flex-direction: column;
     gap: 8px;
-    padding: 12px 16px 14px;
+    padding: 12px max(16px, env(safe-area-inset-left, 0px)) calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Mobile player: top row = now playing + expand btn */
+  /* Player top row: full width, now-playing + expand */
   .player-top-row {
+    flex: none;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
     gap: 12px;
   }
 
   .np-info {
     flex: 1;
     min-width: 0;
-    /* Remove fixed flex-basis on mobile */
   }
 
   /* Controls full width */
@@ -1792,25 +1884,28 @@ body.low-power * { transition-duration: 0.05s !important; }
     gap: 8px;
   }
 
-  .ctrl-btns { gap: 4px; }
+  .ctrl-btns { gap: 2px; }
 
-  /* Right controls: volume + expand — only expand on mobile, volume hidden */
+  /* Right controls hidden on mobile */
   .player-right { display: none; }
 
-  /* Mobile expand button injected separately */
+  /* Mobile expand button */
   .player-expand-mobile {
     flex-shrink: 0;
     background: none;
     border: 1px solid var(--border);
     color: var(--text-muted);
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
     touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 44px;
+    min-height: 44px;
   }
   .player-expand-mobile svg { width: 18px; height: 18px; display: block; }
   .player-expand-mobile:hover {
@@ -1818,31 +1913,158 @@ body.low-power * { transition-duration: 0.05s !important; }
     color: var(--accent-1);
   }
 
-  /* Immersive mode: always show controls on mobile */
-  body.expand-mode .expand-ui,
-  body.expand-mode #collapse-btn {
-    opacity: 1;
-    transform: none;
-    pointer-events: all;
+  /* Expand mode on mobile: larger touch targets */
+  #expand-play-btn {
+    width: 68px;
+    height: 68px;
+  }
+  #expand-play-btn svg { width: 32px; height: 32px; }
+
+  .expand-ctrl-btn {
+    min-width: 56px;
+    min-height: 56px;
   }
 
-  /* Expand progress wrap full width on mobile */
+  .expand-swipe-hint { display: block; }
+
   .expand-progress-wrap { max-width: 100%; }
 
   /* Expand reco panel on mobile */
   .expand-reco-panel { max-width: 100%; }
-  .expand-reco-item { width: 70px; }
-  .expand-reco-thumb { width: 70px; height: 44px; }
+  .expand-reco-list { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 4px; scrollbar-width: none; }
+  .expand-reco-list::-webkit-scrollbar { display: none; }
+  .expand-reco-item { width: 76px; flex-shrink: 0; }
+  .expand-reco-thumb { width: 76px; height: 48px; }
 
-  /* Modal better on mobile */
+  /* Modal: bottom sheet on mobile */
   #dhyaan-modal-backdrop { align-items: flex-end; padding: 0; }
   #dhyaan-modal-box {
     border-radius: 20px 20px 0 0;
     max-width: 100%;
     transform: scale(1) translateY(100%);
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
   #dhyaan-modal-backdrop.open #dhyaan-modal-box {
     transform: scale(1) translateY(0);
+  }
+
+  /* Toast: above player on mobile */
+  .dhyaan-toast {
+    bottom: calc(clamp(90px, 15vw, 110px) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Expand mode: portrait mobile ────────────────────────────────────────── */
+@media (max-width: 768px) and (orientation: portrait) {
+  /* Controls auto-hide — same as desktop, touch to show */
+  /* Already handled by JS - just ensure transitions are smooth */
+  .expand-ui {
+    gap: 12px;
+    padding: 20px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+
+  #expand-title {
+    font-size: clamp(1.2rem, 6vw, 1.8rem);
+  }
+
+  .expand-controls { gap: 14px; }
+}
+
+/* ── Expand mode: landscape mobile — cinematic side layout ───────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* In landscape expand mode, restructure to side-by-side */
+  body.expand-mode #expand-overlay {
+    display: flex;
+    flex-direction: row;
+  }
+
+  body.expand-mode #expand-image {
+    position: relative;
+    width: 42%;
+    height: 100%;
+    object-fit: cover;
+    flex-shrink: 0;
+    /* Keep the same filter */
+  }
+
+  body.expand-mode .expand-gradient {
+    /* Subtle right-side gradient for the image */
+    background:
+      linear-gradient(to right, transparent 60%, rgba(0,0,0,0.9) 100%),
+      linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%);
+  }
+
+  body.expand-mode .expand-ui {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 16px 20px 16px 16px;
+    text-align: center;
+    background: var(--bg-primary);
+    overflow-y: auto;
+    gap: 10px;
+    /* In landscape, always show controls */
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: all !important;
+  }
+
+  /* In landscape, collapse btn moves to top-right of the UI panel */
+  body.expand-mode #collapse-btn {
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: all !important;
+  }
+
+  body.expand-mode #expand-title {
+    font-size: clamp(1rem, 3.5vw, 1.4rem);
+    margin-bottom: 4px;
+  }
+
+  body.expand-mode #expand-moods {
+    font-size: 0.55rem;
+    margin-bottom: 4px;
+  }
+
+  body.expand-mode .expand-progress-wrap {
+    max-width: 100%;
+  }
+
+  body.expand-mode .expand-controls {
+    gap: 12px;
+  }
+
+  body.expand-mode #expand-play-btn {
+    width: 52px;
+    height: 52px;
+  }
+  body.expand-mode #expand-play-btn svg { width: 24px; height: 24px; }
+
+  body.expand-mode .expand-ctrl-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  body.expand-mode .expand-ctrl-btn svg { width: 22px; height: 22px; }
+
+  body.expand-mode .expand-reco-panel {
+    display: none; /* hide reco in landscape to save space */
+  }
+
+  body.expand-mode .expand-swipe-hint { display: none; }
+
+  /* Particle canvas stays behind */
+  body.expand-mode #particle-canvas {
+    z-index: 501;
+    position: fixed;
   }
 }
 
@@ -1850,27 +2072,23 @@ body.low-power * { transition-duration: 0.05s !important; }
 @media (max-width: 480px) {
   #track-list { grid-template-columns: 1fr; }
 
-  .logo span:not(.logo-glyph) { display: block; }
-
-  .ctrl-btn { padding: 7px; }
+  .ctrl-btn { padding: 8px; }
   .ctrl-btn svg { width: 18px; height: 18px; }
 
-  #play-pause-btn {
-    width: 46px;
-    height: 46px;
-  }
+  #play-pause-btn { width: 48px; height: 48px; }
 
   .mood-pill {
-    padding: 5px 10px;
+    padding: 6px 11px;
     font-size: 0.82rem;
   }
 
-  /* Seek buttons hidden on very small screens */
   .ctrl-btn.seek-btn { display: none; }
 
-  #expand-title { font-size: clamp(1.2rem, 7vw, 1.8rem); }
+  #expand-title { font-size: clamp(1.1rem, 7vw, 1.6rem); }
+  .expand-controls { gap: 10px; }
 
-  .expand-controls { gap: 12px; }
+  /* Keep track thumb readable on small phones */
+  .np-thumb { width: 42px; height: 42px; }
 }
 
 /* ── Very small phones (≤380px) ──────────────────────────────────────────── */
@@ -1879,24 +2097,23 @@ body.low-power * { transition-duration: 0.05s !important; }
   .logo-glyph { font-size: 1.1rem; }
   .logo span:not(.logo-glyph) { font-size: 1.2rem; }
 
-  #play-pause-btn { width: 42px; height: 42px; }
+  #play-pause-btn { width: 44px; height: 44px; }
+  #play-pause-btn svg { width: 22px; height: 22px; }
+
+  .ctrl-btn { padding: 7px; min-width: 36px; min-height: 36px; }
+
+  #expand-play-btn { width: 60px; height: 60px; }
 }
 
 /* ── Large screens ────────────────────────────────────────────────────────── */
 @media (min-width: 1400px) {
-  #app {
-    grid-template-columns: 280px 1fr;
-  }
-  #track-list {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
+  #app { grid-template-columns: 280px 1fr; }
+  .player-top-row { flex: 0 0 280px; }
+  #track-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 @media (min-width: 1800px) {
-  #app {
-    grid-template-columns: 300px 1fr;
-  }
-  #track-list {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  }
+  #app { grid-template-columns: 300px 1fr; }
+  .player-top-row { flex: 0 0 300px; }
+  #track-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 }
