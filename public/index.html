@@ -2,9 +2,11 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Dhyaan — A living meditation experience. Immersive ambient soundscapes for deep focus, healing, and stillness." />
   <meta name="theme-color" content="#0a0f0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Dhyaan — A Living Meditation Experience</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,9 +17,12 @@
 <!-- Ambient canvas -->
 <canvas id="particle-canvas" aria-hidden="true"></canvas>
 
+<!-- Mobile sidebar backdrop -->
+<div id="mobile-sidebar-backdrop" aria-hidden="true"></div>
+
 <!-- ── Expand mode overlay ───────────────────────────────────────────────── -->
 <div id="expand-overlay" role="dialog" aria-label="Immersive player" aria-modal="true">
-  <img id="expand-image" src="" alt="Album art" />
+  <img id="expand-image" src="" alt="Album art" draggable="false" />
   <div class="expand-gradient"></div>
 
   <button id="collapse-btn" aria-label="Exit immersive mode" title="Exit (Esc)">
@@ -49,6 +54,8 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
       </button>
     </div>
+
+    <!-- Recommendations panel (injected by app.js) -->
   </div>
 </div>
 
@@ -57,7 +64,7 @@
 
   <!-- Header -->
   <header id="header">
-    <div class="logo">
+    <div class="logo" role="button" tabindex="0" aria-label="About Dhyaan">
       <span class="logo-glyph">☸</span>
       <span>Dhyaan</span>
     </div>
@@ -72,7 +79,7 @@
         <button id="search-clear" aria-label="Clear search">✕</button>
       </div>
 
-      <!-- Theme switcher -->
+      <!-- Theme switcher (desktop) -->
       <div class="theme-switcher" aria-label="Theme selector">
         <div class="theme-dot" data-theme-btn="zen-dark" title="Zen Dark" role="button" tabindex="0"></div>
         <div class="theme-dot" data-theme-btn="night-blue" title="Night Blue" role="button" tabindex="0"></div>
@@ -83,30 +90,69 @@
         <div class="theme-dot" data-theme-btn="rose-pink" title="Rose Pink" role="button" tabindex="0"></div>
         <div class="theme-dot" data-theme-btn="moonlight" title="Moonlight Silver" role="button" tabindex="0"></div>
       </div>
+
+      <!-- Mobile menu button (shown on ≤768px) -->
+      <button id="mobile-menu-btn" aria-label="Open playlists and themes">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>
+      </button>
     </div>
   </header>
 
   <!-- Sidebar -->
   <aside id="sidebar">
+    <!-- Mobile-only close button -->
+    <button id="sidebar-close-btn" aria-label="Close panel" style="display:none">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+
+    <!-- Mobile-only sidebar header -->
+    <div id="sidebar-header-mobile" style="display:none">Sanctuary</div>
+
+    <!-- Mobile-only theme panel -->
+    <div id="mobile-theme-panel" style="display:none">
+      <div class="mobile-theme-label">Atmosphere</div>
+      <div class="mobile-theme-grid">
+        <div class="mobile-theme-item" data-theme-mobile="zen-dark">
+          <div class="mobile-theme-swatch" style="background:#3ddc84"></div>
+          <span class="mobile-theme-name">Zen Dark</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="night-blue">
+          <div class="mobile-theme-swatch" style="background:#5b8dee"></div>
+          <span class="mobile-theme-name">Night Blue</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="cosmic-purple">
+          <div class="mobile-theme-swatch" style="background:#a78bfa"></div>
+          <span class="mobile-theme-name">Cosmic</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="forest-calm">
+          <div class="mobile-theme-swatch" style="background:#86efac"></div>
+          <span class="mobile-theme-name">Forest</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="spiritual-green">
+          <div class="mobile-theme-swatch" style="background:#6ee7b7"></div>
+          <span class="mobile-theme-name">Spiritual</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="sunset-gold">
+          <div class="mobile-theme-swatch" style="background:#f59e0b"></div>
+          <span class="mobile-theme-name">Sunset</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="rose-pink">
+          <div class="mobile-theme-swatch" style="background:#f472b6"></div>
+          <span class="mobile-theme-name">Rose</span>
+        </div>
+        <div class="mobile-theme-item" data-theme-mobile="moonlight">
+          <div class="mobile-theme-swatch" style="background:#cbd5e1"></div>
+          <span class="mobile-theme-name">Moonlight</span>
+        </div>
+      </div>
+    </div>
+
     <div class="sidebar-section">
       <div class="sidebar-label">
         <span>Playlists</span>
         <button id="new-playlist-btn" aria-label="New playlist">+ New</button>
       </div>
       <div id="playlists-container"></div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label"><span>Keyboard</span></div>
-      <div class="keys-hint">
-        <span class="key-item"><kbd>Space</kbd> Play</span>
-        <span class="key-item"><kbd>←/→</kbd> Seek</span>
-        <span class="key-item"><kbd>↑/↓</kbd> Vol</span>
-        <span class="key-item"><kbd>N</kbd> Next</span>
-        <span class="key-item"><kbd>P</kbd> Prev</span>
-        <span class="key-item"><kbd>E</kbd> Expand</span>
-        <span class="key-item"><kbd>Esc</kbd> Close</span>
-      </div>
     </div>
   </aside>
 
@@ -123,15 +169,21 @@
 
   <!-- Player bar -->
   <footer id="player">
-    <!-- Now playing -->
-    <div class="np-info">
-      <div class="np-thumb">
-        <img id="np-image" src="" alt="Now playing" />
+    <!-- Now playing + mobile expand (top row on mobile) -->
+    <div class="player-top-row">
+      <div class="np-info">
+        <div class="np-thumb">
+          <img id="np-image" src="" alt="Now playing" draggable="false" />
+        </div>
+        <div class="np-text">
+          <div id="np-title">Select a track</div>
+          <div id="np-moods">―</div>
+        </div>
       </div>
-      <div class="np-text">
-        <div id="np-title">Select a track</div>
-        <div id="np-moods">―</div>
-      </div>
+      <!-- Mobile-only expand button (desktop expand is in .player-right) -->
+      <button class="player-expand-mobile" id="expand-btn-mobile" aria-label="Immersive mode" title="Immersive mode" style="display:none">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      </button>
     </div>
 
     <!-- Controls -->
@@ -190,7 +242,7 @@
       </div>
     </div>
 
-    <!-- Right controls -->
+    <!-- Right controls (desktop only) -->
     <div class="player-right">
       <div class="volume-wrap">
         <span class="vol-icon">
@@ -211,7 +263,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // Expand overlay prev/next/play — delegate to main player controls
+    // ── Expand overlay delegates ───────────────────────────────────────────
     document.getElementById('expand-prev')?.addEventListener('click', () =>
       document.getElementById('prev-btn')?.click());
     document.getElementById('expand-next')?.addEventListener('click', () =>
@@ -219,7 +271,11 @@
     document.getElementById('expand-play-btn')?.addEventListener('click', () =>
       document.getElementById('play-pause-btn')?.click());
 
-    // Sync expand progress/time/track-info from player via MutationObserver
+    // Mobile expand button mirrors desktop
+    document.getElementById('expand-btn-mobile')?.addEventListener('click', () =>
+      document.getElementById('expand-btn')?.click());
+
+    // ── Sync expand overlay from player ───────────────────────────────────
     const progressFilled = document.getElementById('progress-filled');
     if (progressFilled) {
       const syncUI = () => {
@@ -240,19 +296,112 @@
       new MutationObserver(syncUI).observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
     }
 
-    // Expand progress bar click-to-seek
+    // ── Expand progress bar seek ───────────────────────────────────────────
     document.getElementById('expand-progress-bar')?.addEventListener('click', (e) => {
       const bar = document.getElementById('expand-progress-bar');
       const pct = Math.max(0, Math.min(1, (e.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth));
       document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
     });
 
-    // Theme dot keyboard accessibility
+    // ── Logo keyboard accessibility ────────────────────────────────────────
+    document.querySelector('.logo')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+    });
+
+    // ── Theme dot keyboard accessibility ──────────────────────────────────
     document.querySelectorAll('.theme-dot').forEach(dot => {
       dot.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dot.click(); }
       });
     });
+
+    // ── Mobile sidebar ─────────────────────────────────────────────────────
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('mobile-sidebar-backdrop');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+    const sidebarHeaderMobile = document.getElementById('sidebar-header-mobile');
+    const mobileThemePanel = document.getElementById('mobile-theme-panel');
+
+    function isMobile() {
+      return window.innerWidth <= 768;
+    }
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('open');
+      backdrop.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('open');
+      backdrop.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function applyMobileUI() {
+      if (isMobile()) {
+        closeBtn.style.display = 'flex';
+        sidebarHeaderMobile.style.display = 'block';
+        mobileThemePanel.style.display = 'block';
+        document.getElementById('expand-btn-mobile').style.display = 'flex';
+      } else {
+        closeBtn.style.display = 'none';
+        sidebarHeaderMobile.style.display = 'none';
+        mobileThemePanel.style.display = 'none';
+        document.getElementById('expand-btn-mobile').style.display = 'none';
+        // If sidebar was open from mobile, close it
+        sidebar.classList.remove('open');
+        backdrop.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    menuBtn?.addEventListener('click', openSidebar);
+    closeBtn?.addEventListener('click', closeSidebar);
+    backdrop?.addEventListener('click', closeSidebar);
+
+    // ── Mobile theme selection ─────────────────────────────────────────────
+    document.querySelectorAll('.mobile-theme-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const theme = item.dataset.themeMobile;
+        if (!theme) return;
+        // Trigger same theme change as desktop dots
+        const desktopDot = document.querySelector(`[data-theme-btn="${theme}"]`);
+        if (desktopDot) {
+          desktopDot.click();
+        }
+        // Update active state in mobile grid
+        document.querySelectorAll('.mobile-theme-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        // Close sidebar after picking theme on mobile
+        setTimeout(closeSidebar, 300);
+      });
+    });
+
+    // Sync active theme in mobile panel
+    function syncMobileThemeActive(theme) {
+      document.querySelectorAll('.mobile-theme-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.themeMobile === theme);
+      });
+    }
+
+    // Observe body data-theme changes
+    const themeObserver = new MutationObserver(() => {
+      const theme = document.body.getAttribute('data-theme');
+      if (theme) syncMobileThemeActive(theme);
+    });
+    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // Initial sync
+    const initialTheme = document.body.getAttribute('data-theme') || 'zen-dark';
+    syncMobileThemeActive(initialTheme);
+
+    // Initial mobile state
+    applyMobileUI();
+    window.addEventListener('resize', applyMobileUI);
   });
 </script>
 

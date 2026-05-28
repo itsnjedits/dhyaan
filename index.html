@@ -2,14 +2,40 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <meta name="description" content="Dhyaan — A living meditation experience. Immersive ambient soundscapes for deep focus, healing, and stillness." />
+
+  <!-- PWA / Theme -->
+  <meta name="theme-color" content="#0a0f0d" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#0a0f0d" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- Apple PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Dhyaan" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="apple-touch-startup-image" href="/assets/icons/icon-512.png" />
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-96.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Dhyaan — A Living Meditation Experience" />
+  <meta property="og:description" content="Immersive ambient soundscapes for deep focus, healing, and stillness." />
+  <meta property="og:type" content="website" />
+
   <title>Dhyaan — A Living Meditation Experience</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
+
   <link rel="stylesheet" href="./css/main.css" />
 </head>
 <body data-theme="zen-dark">
@@ -21,7 +47,7 @@
 <div id="mobile-sidebar-backdrop" aria-hidden="true"></div>
 
 <!-- ── Expand mode overlay ───────────────────────────────────────────────── -->
-<div id="expand-overlay" role="dialog" aria-label="Immersive player" aria-modal="true">
+<div id="expand-overlay" role="dialog" aria-label="Immersive player" aria-modal="true" aria-hidden="true">
   <img id="expand-image" src="" alt="Album art" draggable="false" />
   <div class="expand-gradient"></div>
 
@@ -37,8 +63,10 @@
 
     <div class="expand-progress-wrap">
       <span class="expand-time" id="expand-current">0:00</span>
-      <div class="expand-progress-bar" id="expand-progress-bar">
+      <div class="expand-progress-bar" id="expand-progress-bar" role="slider"
+           aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div id="expand-filled"></div>
+        <div id="expand-thumb" class="progress-thumb"></div>
       </div>
       <span class="expand-time" id="expand-duration">0:00</span>
     </div>
@@ -54,6 +82,8 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
       </button>
     </div>
+
+    <div class="expand-swipe-hint">tap to show controls</div>
 
     <!-- Recommendations panel (injected by app.js) -->
   </div>
@@ -72,44 +102,46 @@
     <div class="header-controls">
       <!-- Search -->
       <div class="search-wrap">
-        <span class="search-icon">
+        <span class="search-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </span>
-        <input id="search-input" type="search" placeholder="Search tracks, moods…" autocomplete="off" spellcheck="false" />
-        <button id="search-clear" aria-label="Clear search">✕</button>
+        <input id="search-input" type="search" placeholder="Search tracks, moods…"
+               autocomplete="off" spellcheck="false" aria-label="Search tracks and moods"
+               inputmode="search" enterkeyhint="search" />
+        <button id="search-clear" aria-label="Clear search" title="Clear">✕</button>
       </div>
 
       <!-- Theme switcher (desktop) -->
-      <div class="theme-switcher" aria-label="Theme selector">
-        <div class="theme-dot" data-theme-btn="zen-dark" title="Zen Dark" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="night-blue" title="Night Blue" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="cosmic-purple" title="Cosmic Purple" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="forest-calm" title="Forest Calm" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="spiritual-green" title="Spiritual Green" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="sunset-gold" title="Sunset Gold" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="rose-pink" title="Rose Pink" role="button" tabindex="0"></div>
-        <div class="theme-dot" data-theme-btn="moonlight" title="Moonlight Silver" role="button" tabindex="0"></div>
+      <div class="theme-switcher" aria-label="Theme selector" role="group">
+        <div class="theme-dot" data-theme-btn="zen-dark"        title="Zen Dark"        role="button" tabindex="0" aria-label="Zen Dark theme"></div>
+        <div class="theme-dot" data-theme-btn="night-blue"      title="Night Blue"       role="button" tabindex="0" aria-label="Night Blue theme"></div>
+        <div class="theme-dot" data-theme-btn="cosmic-purple"   title="Cosmic Purple"    role="button" tabindex="0" aria-label="Cosmic Purple theme"></div>
+        <div class="theme-dot" data-theme-btn="forest-calm"     title="Forest Calm"      role="button" tabindex="0" aria-label="Forest Calm theme"></div>
+        <div class="theme-dot" data-theme-btn="spiritual-green" title="Spiritual Green"  role="button" tabindex="0" aria-label="Spiritual Green theme"></div>
+        <div class="theme-dot" data-theme-btn="sunset-gold"     title="Sunset Gold"      role="button" tabindex="0" aria-label="Sunset Gold theme"></div>
+        <div class="theme-dot" data-theme-btn="rose-pink"       title="Rose Pink"        role="button" tabindex="0" aria-label="Rose Pink theme"></div>
+        <div class="theme-dot" data-theme-btn="moonlight"       title="Moonlight Silver" role="button" tabindex="0" aria-label="Moonlight theme"></div>
       </div>
 
       <!-- Mobile menu button (shown on ≤768px) -->
-      <button id="mobile-menu-btn" aria-label="Open playlists and themes">
+      <button id="mobile-menu-btn" aria-label="Open playlists and themes" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>
       </button>
     </div>
   </header>
 
   <!-- Sidebar -->
-  <aside id="sidebar">
+  <aside id="sidebar" aria-label="Playlists and settings">
     <!-- Mobile-only close button -->
-    <button id="sidebar-close-btn" aria-label="Close panel" style="display:none">
+    <button id="sidebar-close-btn" aria-label="Close panel" class="sidebar-close-btn-hidden">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
 
     <!-- Mobile-only sidebar header -->
-    <div id="sidebar-header-mobile" style="display:none">Sanctuary</div>
+    <div id="sidebar-header-mobile" class="sidebar-mobile-header-hidden">Sanctuary</div>
 
     <!-- Mobile-only theme panel -->
-    <div id="mobile-theme-panel" style="display:none">
+    <div id="mobile-theme-panel" class="mobile-theme-panel-hidden">
       <div class="mobile-theme-label">Atmosphere</div>
       <div class="mobile-theme-grid">
         <div class="mobile-theme-item" data-theme-mobile="zen-dark">
@@ -168,20 +200,21 @@
   </main>
 
   <!-- Player bar -->
-  <footer id="player">
+  <footer id="player" aria-label="Music player">
     <!-- Now playing + mobile expand (top row on mobile) -->
     <div class="player-top-row">
       <div class="np-info">
         <div class="np-thumb">
-          <img id="np-image" src="" alt="Now playing" draggable="false" />
+          <img id="np-image" src="" alt="Now playing" draggable="false" loading="lazy" />
         </div>
         <div class="np-text">
           <div id="np-title">Select a track</div>
           <div id="np-moods">―</div>
         </div>
       </div>
-      <!-- Mobile-only expand button (desktop expand is in .player-right) -->
-      <button class="player-expand-mobile" id="expand-btn-mobile" aria-label="Immersive mode" title="Immersive mode" style="display:none">
+      <!-- Mobile-only expand button -->
+      <button class="player-expand-mobile mobile-only" id="expand-btn-mobile"
+              aria-label="Immersive mode" title="Immersive mode">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
       </button>
     </div>
@@ -195,7 +228,7 @@
         </button>
 
         <!-- Seek back -->
-        <button class="ctrl-btn seek-btn" id="seek-bwd" aria-label="Seek back 10s" title="−10s">
+        <button class="ctrl-btn seek-btn desktop-only" id="seek-bwd" aria-label="Seek back 10s" title="−10s">
           <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
           <span>10</span>
         </button>
@@ -216,7 +249,7 @@
         </button>
 
         <!-- Seek forward -->
-        <button class="ctrl-btn seek-btn" id="seek-fwd" aria-label="Seek forward 10s" title="+10s">
+        <button class="ctrl-btn seek-btn desktop-only" id="seek-fwd" aria-label="Seek forward 10s" title="+10s">
           <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
           <span>10</span>
         </button>
@@ -232,23 +265,27 @@
         </button>
       </div>
 
-      <!-- Progress bar -->
+      <!-- Progress bar with thumb -->
       <div class="progress-wrap">
         <span class="time-label" id="current-time">0:00</span>
-        <div id="progress-bar" role="slider" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div id="progress-filled"></div>
+        <div id="progress-bar" class="progress-bar-track" role="slider"
+             aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+             tabindex="0">
+          <div id="progress-filled" class="progress-bar-fill"></div>
+          <div id="progress-thumb" class="progress-thumb"></div>
         </div>
         <span class="time-label" id="duration">0:00</span>
       </div>
     </div>
 
     <!-- Right controls (desktop only) -->
-    <div class="player-right">
+    <div class="player-right desktop-only">
       <div class="volume-wrap">
-        <span class="vol-icon">
+        <span class="vol-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </span>
-        <input id="volume-slider" type="range" min="0" max="100" value="75" aria-label="Volume" />
+        <input id="volume-slider" type="range" min="0" max="100" value="75"
+               aria-label="Volume" autocomplete="off" />
       </div>
 
       <button id="expand-btn" aria-label="Immersive mode" title="Immersive mode (E)">
@@ -262,147 +299,296 @@
 <script type="module" src="./js/app.js"></script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // ── Expand overlay delegates ───────────────────────────────────────────
-    document.getElementById('expand-prev')?.addEventListener('click', () =>
-      document.getElementById('prev-btn')?.click());
-    document.getElementById('expand-next')?.addEventListener('click', () =>
-      document.getElementById('next-btn')?.click());
-    document.getElementById('expand-play-btn')?.addEventListener('click', () =>
-      document.getElementById('play-pause-btn')?.click());
+document.addEventListener('DOMContentLoaded', () => {
 
-    // Mobile expand button mirrors desktop
-    document.getElementById('expand-btn-mobile')?.addEventListener('click', () =>
-      document.getElementById('expand-btn')?.click());
+  // ── Register Service Worker ──────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              nw.postMessage('skipWaiting');
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  }
 
-    // ── Sync expand overlay from player ───────────────────────────────────
-    const progressFilled = document.getElementById('progress-filled');
-    if (progressFilled) {
-      const syncUI = () => {
-        const w = progressFilled.style.width;
-        const expandFilled = document.getElementById('expand-filled');
-        if (expandFilled) expandFilled.style.width = w;
+  // ── Expand overlay delegates ─────────────────────────────────────────────
+  document.getElementById('expand-prev')?.addEventListener('click', () =>
+    document.getElementById('prev-btn')?.click());
+  document.getElementById('expand-next')?.addEventListener('click', () =>
+    document.getElementById('next-btn')?.click());
+  document.getElementById('expand-play-btn')?.addEventListener('click', () =>
+    document.getElementById('play-pause-btn')?.click());
+  document.getElementById('expand-btn-mobile')?.addEventListener('click', () =>
+    document.getElementById('expand-btn')?.click());
 
-        const ct  = document.getElementById('current-time')?.textContent;
-        const dur = document.getElementById('duration')?.textContent;
-        if (ct)  document.getElementById('expand-current').textContent = ct;
-        if (dur) document.getElementById('expand-duration').textContent = dur;
+  // ── Sync expand overlay from player ─────────────────────────────────────
+  const progressFilled = document.getElementById('progress-filled');
+  if (progressFilled) {
+    const syncExpandUI = () => {
+      const w   = progressFilled.style.width;
+      const ct  = document.getElementById('current-time')?.textContent;
+      const dur = document.getElementById('duration')?.textContent;
+      const ef  = document.getElementById('expand-filled');
+      const et  = document.getElementById('expand-thumb');
 
-        const title = document.getElementById('np-title')?.textContent;
-        const moods = document.getElementById('np-moods')?.textContent;
-        if (title) document.getElementById('expand-title').textContent = title;
-        if (moods) document.getElementById('expand-moods').textContent = moods;
-      };
-      new MutationObserver(syncUI).observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
-    }
-
-    // ── Expand progress bar seek ───────────────────────────────────────────
-    document.getElementById('expand-progress-bar')?.addEventListener('click', (e) => {
-      const bar = document.getElementById('expand-progress-bar');
-      const pct = Math.max(0, Math.min(1, (e.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth));
-      document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
-    });
-
-    // ── Logo keyboard accessibility ────────────────────────────────────────
-    document.querySelector('.logo')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
-    });
-
-    // ── Theme dot keyboard accessibility ──────────────────────────────────
-    document.querySelectorAll('.theme-dot').forEach(dot => {
-      dot.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dot.click(); }
-      });
-    });
-
-    // ── Mobile sidebar ─────────────────────────────────────────────────────
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('mobile-sidebar-backdrop');
-    const menuBtn = document.getElementById('mobile-menu-btn');
-    const closeBtn = document.getElementById('sidebar-close-btn');
-    const sidebarHeaderMobile = document.getElementById('sidebar-header-mobile');
-    const mobileThemePanel = document.getElementById('mobile-theme-panel');
-
-    function isMobile() {
-      return window.innerWidth <= 768;
-    }
-
-    function openSidebar() {
-      sidebar.classList.add('open');
-      backdrop.classList.add('open');
-      backdrop.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeSidebar() {
-      sidebar.classList.remove('open');
-      backdrop.classList.remove('open');
-      backdrop.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    }
-
-    function applyMobileUI() {
-      if (isMobile()) {
-        closeBtn.style.display = 'flex';
-        sidebarHeaderMobile.style.display = 'block';
-        mobileThemePanel.style.display = 'block';
-        document.getElementById('expand-btn-mobile').style.display = 'flex';
-      } else {
-        closeBtn.style.display = 'none';
-        sidebarHeaderMobile.style.display = 'none';
-        mobileThemePanel.style.display = 'none';
-        document.getElementById('expand-btn-mobile').style.display = 'none';
-        // If sidebar was open from mobile, close it
-        sidebar.classList.remove('open');
-        backdrop.classList.remove('open');
-        document.body.style.overflow = '';
+      if (ef) {
+        ef.style.width = w;
+        // Sync thumb position
+        if (et) et.style.left = w;
       }
+      if (ct)  document.getElementById('expand-current').textContent = ct;
+      if (dur) document.getElementById('expand-duration').textContent = dur;
+
+      // Keep ARIA values in sync
+      const pct = parseFloat(w) || 0;
+      document.getElementById('progress-bar')?.setAttribute('aria-valuenow', Math.round(pct));
+      document.getElementById('expand-progress-bar')?.setAttribute('aria-valuenow', Math.round(pct));
+
+      const title = document.getElementById('np-title')?.textContent;
+      const moods = document.getElementById('np-moods')?.textContent;
+      if (title) document.getElementById('expand-title').textContent = title;
+      if (moods) document.getElementById('expand-moods').textContent = moods;
+    };
+    new MutationObserver(syncExpandUI).observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
+  }
+
+  // ── Unified progress seek helper ─────────────────────────────────────────
+  function getSeekPct(e, barEl) {
+    const rect = barEl.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }
+
+  function bindSeekBar(barId) {
+    const bar = document.getElementById(barId);
+    if (!bar) return;
+
+    let dragging = false;
+
+    function doSeek(pct) {
+      document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
     }
 
-    menuBtn?.addEventListener('click', openSidebar);
-    closeBtn?.addEventListener('click', closeSidebar);
-    backdrop?.addEventListener('click', closeSidebar);
-
-    // ── Mobile theme selection ─────────────────────────────────────────────
-    document.querySelectorAll('.mobile-theme-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const theme = item.dataset.themeMobile;
-        if (!theme) return;
-        // Trigger same theme change as desktop dots
-        const desktopDot = document.querySelector(`[data-theme-btn="${theme}"]`);
-        if (desktopDot) {
-          desktopDot.click();
-        }
-        // Update active state in mobile grid
-        document.querySelectorAll('.mobile-theme-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        // Close sidebar after picking theme on mobile
-        setTimeout(closeSidebar, 300);
-      });
-    });
-
-    // Sync active theme in mobile panel
-    function syncMobileThemeActive(theme) {
-      document.querySelectorAll('.mobile-theme-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.themeMobile === theme);
-      });
+    function updateVisual(pct) {
+      const fillId  = barId === 'progress-bar' ? 'progress-filled' : 'expand-filled';
+      const thumbId = barId === 'progress-bar' ? 'progress-thumb'  : 'expand-thumb';
+      const fill  = document.getElementById(fillId);
+      const thumb = document.getElementById(thumbId);
+      const pctStr = `${(pct * 100).toFixed(2)}%`;
+      if (fill)  fill.style.width = pctStr;
+      if (thumb) thumb.style.left = pctStr;
     }
 
-    // Observe body data-theme changes
-    const themeObserver = new MutationObserver(() => {
-      const theme = document.body.getAttribute('data-theme');
-      if (theme) syncMobileThemeActive(theme);
+    // Mouse
+    bar.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      bar.classList.add('dragging');
+      document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
+      const pct = getSeekPct(e, bar);
+      updateVisual(pct);
     });
-    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const pct = getSeekPct(e, bar);
+      updateVisual(pct);
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      bar.classList.remove('dragging');
+      const pct = getSeekPct(e, bar);
+      updateVisual(pct);
+      doSeek(pct);
+      document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
+    });
 
-    // Initial sync
-    const initialTheme = document.body.getAttribute('data-theme') || 'zen-dark';
-    syncMobileThemeActive(initialTheme);
+    // Touch
+    bar.addEventListener('touchstart', (e) => {
+      dragging = true;
+      bar.classList.add('dragging');
+      document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
+      const pct = getSeekPct(e, bar);
+      updateVisual(pct);
+    }, { passive: true });
+    bar.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      const pct = getSeekPct(e, bar);
+      updateVisual(pct);
+    }, { passive: false });
+    bar.addEventListener('touchend', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      bar.classList.remove('dragging');
+      const touch = e.changedTouches[0];
+      const pct = Math.max(0, Math.min(1, (touch.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth));
+      updateVisual(pct);
+      doSeek(pct);
+      document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
+    }, { passive: true });
 
-    // Initial mobile state
-    applyMobileUI();
-    window.addEventListener('resize', applyMobileUI);
+    // Keyboard accessibility
+    bar.addEventListener('keydown', (e) => {
+      const current = parseFloat(bar.getAttribute('aria-valuenow') || 0) / 100;
+      let pct = current;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        pct = Math.min(1, current + 0.02);
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        pct = Math.max(0, current - 0.02);
+        e.preventDefault();
+      } else if (e.key === 'Home') { pct = 0; e.preventDefault(); }
+      else if (e.key === 'End') { pct = 1; e.preventDefault(); }
+      else return;
+      updateVisual(pct);
+      doSeek(pct);
+    });
+  }
+
+  bindSeekBar('progress-bar');
+  bindSeekBar('expand-progress-bar');
+
+  // ── Logo keyboard accessibility ──────────────────────────────────────────
+  document.querySelector('.logo')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
   });
+
+  // ── Theme dot keyboard accessibility ────────────────────────────────────
+  document.querySelectorAll('.theme-dot').forEach(dot => {
+    dot.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dot.click(); }
+    });
+  });
+
+  // ── Mobile sidebar ───────────────────────────────────────────────────────
+  const sidebar      = document.getElementById('sidebar');
+  const backdrop     = document.getElementById('mobile-sidebar-backdrop');
+  const menuBtn      = document.getElementById('mobile-menu-btn');
+  const closeBtn     = document.getElementById('sidebar-close-btn');
+  const sidebarHdr   = document.getElementById('sidebar-header-mobile');
+  const themePanel   = document.getElementById('mobile-theme-panel');
+  const expandMobile = document.getElementById('expand-btn-mobile');
+
+  function isMobile() { return window.innerWidth <= 768; }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden', 'false');
+    menuBtn?.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+    // Trap scroll
+    sidebar.focus({ preventScroll: true });
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  function applyMobileUI() {
+    const mobile = isMobile();
+    // Use class toggling instead of inline style to avoid conflicts
+    closeBtn?.classList.toggle('sidebar-close-btn-hidden', !mobile);
+    sidebarHdr?.classList.toggle('sidebar-mobile-header-hidden', !mobile);
+    themePanel?.classList.toggle('mobile-theme-panel-hidden', !mobile);
+    expandMobile?.classList.toggle('mobile-only-hidden', !mobile);
+
+    if (!mobile) {
+      closeSidebar();
+    }
+  }
+
+  menuBtn?.addEventListener('click', openSidebar);
+  closeBtn?.addEventListener('click', closeSidebar);
+  backdrop?.addEventListener('click', closeSidebar);
+
+  // Swipe left to close sidebar
+  let _sidebarTouchStartX = 0;
+  sidebar.addEventListener('touchstart', (e) => {
+    _sidebarTouchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  sidebar.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - _sidebarTouchStartX;
+    if (dx < -50 && isMobile()) closeSidebar();
+  }, { passive: true });
+
+  // ── Mobile theme selection ───────────────────────────────────────────────
+  document.querySelectorAll('.mobile-theme-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const theme = item.dataset.themeMobile;
+      if (!theme) return;
+      const desktopDot = document.querySelector(`[data-theme-btn="${theme}"]`);
+      if (desktopDot) desktopDot.click();
+      document.querySelectorAll('.mobile-theme-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      setTimeout(closeSidebar, 280);
+    });
+  });
+
+  function syncMobileThemeActive(theme) {
+    document.querySelectorAll('.mobile-theme-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.themeMobile === theme);
+    });
+  }
+
+  const themeObserver = new MutationObserver(() => {
+    const theme = document.body.getAttribute('data-theme');
+    if (theme) syncMobileThemeActive(theme);
+  });
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+  const initialTheme = document.body.getAttribute('data-theme') || 'zen-dark';
+  syncMobileThemeActive(initialTheme);
+
+  applyMobileUI();
+  window.addEventListener('resize', applyMobileUI);
+
+  // ── Expand overlay: tap to show/hide controls on mobile ─────────────────
+  const expandOverlay = document.getElementById('expand-overlay');
+  expandOverlay?.addEventListener('click', (e) => {
+    if (!isMobile()) return;
+    const isControl = e.target.closest('button, .expand-progress-bar, .expand-reco-item');
+    if (!isControl) {
+      document.body.classList.toggle('controls-visible');
+    }
+  });
+
+  // ── Prevent pull-to-refresh on expand overlay ───────────────────────────
+  expandOverlay?.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('.expand-reco-list')) e.preventDefault();
+  }, { passive: false });
+
+  // ── Update meta theme-color on theme change ──────────────────────────────
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  const themeColors = {
+    'zen-dark':        '#0a0f0d',
+    'night-blue':      '#080b14',
+    'cosmic-purple':   '#0a080f',
+    'forest-calm':     '#050e08',
+    'spiritual-green': '#080e0a',
+    'sunset-gold':     '#0f0b04',
+    'rose-pink':       '#0f080d',
+    'moonlight':       '#08090c',
+  };
+  new MutationObserver(() => {
+    const theme = document.body.getAttribute('data-theme');
+    if (themeColorMeta && theme && themeColors[theme]) {
+      themeColorMeta.setAttribute('content', themeColors[theme]);
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+});
 </script>
 
 </body>

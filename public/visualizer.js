@@ -9,8 +9,11 @@ let animFrame = null;
 let isRunning = false;
 let expandMode = false;
 let lastTime = 0;
-const FPS_CAP = 50;
-const FRAME_MS = 1000 / FPS_CAP;
+
+// Adaptive FPS — lower on mobile/touch for battery + smoothness
+const isMobileDevice = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+let FPS_CAP = 50;
+let FRAME_MS = 1000 / FPS_CAP;
 
 // Dynamic color — updated when track changes
 let _particleHue = 140;      // dominant hue from artwork (0–360)
@@ -109,9 +112,20 @@ export function initVisualizer(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
 
+  // Adaptive FPS based on device
+  if (isMobileDevice()) {
+    FPS_CAP = 30;
+    FRAME_MS = 1000 / FPS_CAP;
+  }
+
   requestAnimationFrame(() => {
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', () => {
+      // Recheck mobile status on resize
+      FPS_CAP = isMobileDevice() ? 30 : 50;
+      FRAME_MS = 1000 / FPS_CAP;
+      resize();
+    });
   });
 }
 
@@ -134,11 +148,16 @@ export function setParticleColor(hue, sat = 65, lit = 72) {
 function spawnParticles() {
   if (!canvas || canvas.width === 0 || canvas.height === 0) return;
   const state = getState();
+
+  // Adaptive particle count: fewer on mobile for performance
+  const mobile = isMobileDevice();
+  const mobileMult = mobile ? 0.55 : 1;
+
   const total = state.lowPowerMode
     ? CONFIG.PARTICLE_COUNT.low
     : expandMode
-    ? CONFIG.PARTICLE_COUNT.expand
-    : CONFIG.PARTICLE_COUNT.normal;
+    ? Math.floor(CONFIG.PARTICLE_COUNT.expand * mobileMult)
+    : Math.floor(CONFIG.PARTICLE_COUNT.normal * mobileMult);
 
   // Distribute across three depth layers
   const layerSplit = [0.4, 0.4, 0.2]; // 40% back, 40% mid, 20% front

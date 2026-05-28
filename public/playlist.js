@@ -1,4 +1,4 @@
-// playlist.js — Playlist management
+// playlist.js — Playlist management (export/import removed per spec)
 import { getPlaylists, savePlaylists } from './storage.js';
 
 export function createPlaylist(name) {
@@ -48,33 +48,6 @@ export function removeFromPlaylist(playlistId, trackId) {
     savePlaylists(playlists);
   }
   return playlists;
-}
-
-export function exportPlaylist(playlistId, allTracks) {
-  const playlists = getPlaylists();
-  const pl = playlists.find(p => p.id === playlistId);
-  if (!pl) return null;
-  const tracks = pl.trackIds.map(id => allTracks.find(t => t.id === id)).filter(Boolean);
-  return JSON.stringify({ ...pl, tracks }, null, 2);
-}
-
-export function importPlaylist(jsonString) {
-  try {
-    const data = JSON.parse(jsonString);
-    const playlists = getPlaylists();
-    const newPL = {
-      id: Date.now().toString(),
-      name: data.name || 'Imported Playlist',
-      trackIds: data.trackIds || (data.tracks || []).map(t => t.id),
-      createdAt: new Date().toISOString(),
-    };
-    playlists.push(newPL);
-    savePlaylists(playlists);
-    return newPL;
-  } catch (e) {
-    console.error('Import failed:', e);
-    return null;
-  }
 }
 
 export function getAllPlaylists() {

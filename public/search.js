@@ -1,7 +1,20 @@
-// search.js — Fuzzy search (Levenshtein-based, no external deps)
+// search.js — Fuzzy search (Levenshtein + phonetic normalization, no deps)
+
+// Phonetic normalization: collapse common sound-alike substitutions
+function phonetize(s) {
+  return s
+    .toLowerCase()
+    .replace(/ph/g, 'f')
+    .replace(/ck|k/g, 'c')
+    .replace(/[aeiou]+/g, 'a') // vowel collapsing
+    .replace(/(.)\1+/g, '$1')  // deduplicate consecutive chars
+    .replace(/[^a-z0-9 ]/g, '');
+}
 
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
   const dp = Array.from({ length: m + 1 }, (_, i) =>
     Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
   );
@@ -18,19 +31,35 @@ function levenshtein(a, b) {
 function fuzzyScore(query, target) {
   query = query.toLowerCase().trim();
   target = target.toLowerCase().trim();
-  if (!query) return 1;
-  if (target.includes(query)) return 0; // exact substring = best score
-  const words = query.split(' ');
+  if (!query) return 0;
+
+  // Exact substring → best score
+  if (target.includes(query)) return 0;
+
+  // Phonetic match
+  if (phonetize(target).includes(phonetize(query))) return 0.5;
+
+  // Word-level Levenshtein with sliding window
+  const words = query.split(/\s+/).filter(w => w.length >= 2);
   let minDist = Infinity;
   for (const word of words) {
-    if (word.length < 2) continue;
-    // sliding window over target
+    const pWord = phonetize(word);
+    // Sliding window over target — check both original and phonetic
     for (let i = 0; i <= target.length - word.length + 2; i++) {
       const slice = target.slice(i, i + word.length + 2);
-      const d = levenshtein(word, slice);
+      const d1 = levenshtein(word, slice);
+      const d2 = levenshtein(pWord, phonetize(slice));
+      const d = Math.min(d1, d2);
       if (d < minDist) minDist = d;
     }
   }
+
+  // Also check full query vs full target for short queries
+  if (query.length <= 6) {
+    const full = levenshtein(query, target.slice(0, query.length + 3));
+    minDist = Math.min(minDist, full);
+  }
+
   return minDist;
 }
 
@@ -39,7 +68,9 @@ export function searchTracks(tracks, query) {
 
   const scored = tracks.map(track => {
     const titleScore = fuzzyScore(query, track.title);
-    const moodScore = Math.min(...(track.moods || []).map(m => fuzzyScore(query, m)));
+    const moodScore = (track.moods || []).length
+      ? Math.min(...(track.moods).map(m => fuzzyScore(query, m)))
+      : Infinity;
     const best = Math.min(titleScore, moodScore);
     return { track, score: best };
   });

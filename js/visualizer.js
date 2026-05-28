@@ -1,144 +1,137 @@
 // visualizer.js — Canvas particle system + ambient visualizer
-// Improved: dynamic artwork-driven color, depth layers, breathing glow
+// v2: RAF-leak-free, adaptive FPS, mobile-optimised
 import { CONFIG } from './config.js';
 import { getState } from './storage.js';
 
 let canvas, ctx;
-let particles = [];
-let animFrame = null;
-let isRunning = false;
+let particles  = [];
+let animFrame  = null;
+let isRunning  = false;
 let expandMode = false;
-let lastTime = 0;
+let lastTime   = 0;
 
-// Adaptive FPS — lower on mobile/touch for battery + smoothness
+// Adaptive FPS
 const isMobileDevice = () => window.innerWidth <= 768 || ('ontouchstart' in window);
-let FPS_CAP = 50;
+let FPS_CAP  = 50;
 let FRAME_MS = 1000 / FPS_CAP;
 
-// Dynamic color — updated when track changes
-let _particleHue = 140;      // dominant hue from artwork (0–360)
-let _particleSat = 65;       // saturation
-let _particleLit = 72;       // lightness
+// Dynamic colour driven by artwork hue extraction
+let _particleHue = 140;
+let _particleSat = 65;
+let _particleLit = 72;
 
-// Breathing glow state
+// Breathing glow
 let _glowPhase = 0;
 
+// Resize debounce
+let _resizeTimer = null;
+
+// ── Particle class ────────────────────────────────────────────────────────────
 class Particle {
   constructor(w, h, expand, layer = 0) {
-    this.layer = layer; // 0=back, 1=mid, 2=front — depth simulation
+    this.layer = layer;
     this.reset(w, h, expand);
   }
 
   reset(w, h, expand) {
-    // Distribute with slight top bias for ethereal rising feel
     this.x = Math.random() * w;
     this.y = Math.random() * h * 1.1;
 
-    // Layer-based sizing — back particles small, front larger
-    const baseR = expand ? 3.0 : 1.8;
-    const layerMult = [0.5, 1.0, 1.6][this.layer];
-    this.r = (Math.random() * baseR + 0.3) * layerMult;
+    const baseR      = expand ? 3.0 : 1.8;
+    const layerMult  = [0.5, 1.0, 1.6][this.layer];
+    this.r           = (Math.random() * baseR + 0.3) * layerMult;
 
-    // Layer-based opacity — back dim, front brighter
-    const baseAlpha = [0.12, 0.28, 0.45][this.layer];
+    const baseAlpha  = [0.12, 0.28, 0.45][this.layer];
     this.targetAlpha = Math.random() * baseAlpha + baseAlpha * 0.3;
-    this.alpha = this.targetAlpha;
+    this.alpha       = this.targetAlpha;
 
-    // Slow upward drift, slight lateral wobble
-    const speed = [0.08, 0.16, 0.28][this.layer];
-    this.vx = (Math.random() - 0.5) * speed * 1.4;
-    this.vy = -(Math.random() * speed + 0.04); // always upward
+    const speed      = [0.08, 0.16, 0.28][this.layer];
+    this.vx          = (Math.random() - 0.5) * speed * 1.4;
+    this.vy          = -(Math.random() * speed + 0.04);
 
-    // Life
-    this.life = Math.floor(Math.random() * 300); // staggered birth
-    this.maxLife = Math.random() * 500 + 300;
+    this.life        = Math.floor(Math.random() * 300);
+    this.maxLife     = Math.random() * 500 + 300;
 
-    // Individual hue variance around dominant color
-    this.hueOffset = (Math.random() - 0.5) * 50;
-
-    // Pulse phase
-    this.pulse = Math.random() * Math.PI * 2;
-    this.pulseSpeed = 0.008 + Math.random() * 0.012;
-
-    // Wobble
-    this.wobble = Math.random() * Math.PI * 2;
-    this.wobbleAmp = (Math.random() * 0.4 + 0.1) * ([0.5, 1, 1.5][this.layer]);
+    this.hueOffset   = (Math.random() - 0.5) * 50;
+    this.pulse       = Math.random() * Math.PI * 2;
+    this.pulseSpeed  = 0.008 + Math.random() * 0.012;
+    this.wobble      = Math.random() * Math.PI * 2;
+    this.wobbleAmp   = (Math.random() * 0.4 + 0.1) * [0.5, 1, 1.5][this.layer];
   }
 
   update(w, h) {
     this.life++;
-    this.pulse += this.pulseSpeed;
+    this.pulse  += this.pulseSpeed;
     this.wobble += 0.01;
 
     this.x += this.vx + Math.sin(this.wobble) * this.wobbleAmp;
     this.y += this.vy;
 
-    // Fade in/out envelope
-    const t = this.life / this.maxLife;
+    const t    = this.life / this.maxLife;
     this.alpha = Math.sin(t * Math.PI) * this.targetAlpha;
 
-    if (this.life >= this.maxLife ||
-        this.x < -20 || this.x > w + 20 ||
-        this.y < -30 || this.y > h + 20) {
+    if (
+      this.life >= this.maxLife ||
+      this.x < -20 || this.x > w + 20 ||
+      this.y < -30 || this.y > h + 20
+    ) {
       this.reset(w, h, expandMode);
     }
   }
 
   draw(ctx) {
     if (this.alpha <= 0.005) return;
-    const hue = ((_particleHue + this.hueOffset + 360) % 360);
-    const sat = Math.min(100, _particleSat + 10);
-    const lit = Math.min(95, _particleLit + 5);
+
+    const hue    = ((_particleHue + this.hueOffset + 360) % 360);
+    const sat    = Math.min(100, _particleSat + 10);
+    const lit    = Math.min(95,  _particleLit  + 5);
     const pulseR = this.r + Math.sin(this.pulse) * (this.r * 0.3);
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, this.alpha);
 
-    // Glow halo (only for mid/front layers)
     if (this.layer >= 1) {
-      ctx.shadowColor = `hsla(${hue}, ${sat}%, ${lit}%, 0.9)`;
-      ctx.shadowBlur = this.layer === 2 ? 14 : 7;
+      ctx.shadowColor = `hsla(${hue},${sat}%,${lit}%,0.9)`;
+      ctx.shadowBlur  = this.layer === 2 ? 14 : 7;
     }
 
     ctx.beginPath();
     ctx.arc(this.x, this.y, pulseR, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, ${sat}%, ${lit}%, 1)`;
+    ctx.fillStyle = `hsla(${hue},${sat}%,${lit}%,1)`;
     ctx.fill();
     ctx.restore();
   }
 }
 
+// ── Public API ────────────────────────────────────────────────────────────────
 export function initVisualizer(canvasEl) {
   canvas = canvasEl;
-  ctx = canvas.getContext('2d');
+  ctx    = canvas.getContext('2d', { alpha: true });
 
-  // Adaptive FPS based on device
-  if (isMobileDevice()) {
-    FPS_CAP = 30;
-    FRAME_MS = 1000 / FPS_CAP;
-  }
+  _updateFpsCap();
 
-  requestAnimationFrame(() => {
-    resize();
-    window.addEventListener('resize', () => {
-      // Recheck mobile status on resize
-      FPS_CAP = isMobileDevice() ? 30 : 50;
-      FRAME_MS = 1000 / FPS_CAP;
+  // Debounced resize
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+      _updateFpsCap();
       resize();
-    });
+    }, 150);
   });
+
+  requestAnimationFrame(() => resize());
 }
 
 export function resize() {
   if (!canvas) return;
-  const w = canvas.offsetWidth || window.innerWidth || 800;
+  const w = canvas.offsetWidth  || window.innerWidth  || 800;
   const h = canvas.offsetHeight || window.innerHeight || 600;
-  canvas.width = w;
+  if (canvas.width === w && canvas.height === h) return; // avoid unnecessary respawn
+  canvas.width  = w;
   canvas.height = h;
   spawnParticles();
 }
 
-// ── Dynamic color from artwork ─────────────────────────────────────────────
 export function setParticleColor(hue, sat = 65, lit = 72) {
   _particleHue = hue;
   _particleSat = sat;
@@ -147,25 +140,25 @@ export function setParticleColor(hue, sat = 65, lit = 72) {
 
 function spawnParticles() {
   if (!canvas || canvas.width === 0 || canvas.height === 0) return;
-  const state = getState();
-
-  // Adaptive particle count: fewer on mobile for performance
+  const state  = getState();
   const mobile = isMobileDevice();
-  const mobileMult = mobile ? 0.55 : 1;
+  const mult   = mobile ? 0.55 : 1;
 
   const total = state.lowPowerMode
     ? CONFIG.PARTICLE_COUNT.low
     : expandMode
-    ? Math.floor(CONFIG.PARTICLE_COUNT.expand * mobileMult)
-    : Math.floor(CONFIG.PARTICLE_COUNT.normal * mobileMult);
+    ? Math.floor(CONFIG.PARTICLE_COUNT.expand * mult)
+    : Math.floor(CONFIG.PARTICLE_COUNT.normal * mult);
 
-  // Distribute across three depth layers
-  const layerSplit = [0.4, 0.4, 0.2]; // 40% back, 40% mid, 20% front
+  const layerSplit = [0.4, 0.4, 0.2];
   particles = [];
   for (let layer = 0; layer < 3; layer++) {
     const count = Math.floor(total * layerSplit[layer]);
     for (let i = 0; i < count; i++) {
-      particles.push(new Particle(canvas.width, canvas.height, expandMode, layer));
+      const p = new Particle(canvas.width, canvas.height, expandMode, layer);
+      // Stagger initial life to avoid synchronised birth flash
+      p.life = Math.floor(Math.random() * p.maxLife);
+      particles.push(p);
     }
   }
 }
@@ -173,27 +166,38 @@ function spawnParticles() {
 export function startVisualizer() {
   if (isRunning) return;
   isRunning = true;
-  lastTime = performance.now();
-  loop();
+  lastTime  = performance.now();
+  _loop();
 }
 
 export function stopVisualizer() {
   isRunning = false;
-  if (animFrame) cancelAnimationFrame(animFrame);
-  animFrame = null;
+  if (animFrame !== null) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
   if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 export function setExpandMode(val) {
-  expandMode = val;
+  expandMode = !!val;
   spawnParticles();
 }
 
-function loop(now = performance.now()) {
+// ── Private ───────────────────────────────────────────────────────────────────
+function _updateFpsCap() {
+  FPS_CAP  = isMobileDevice() ? 30 : 50;
+  FRAME_MS = 1000 / FPS_CAP;
+}
+
+function _loop(now = performance.now()) {
   if (!isRunning) return;
-  animFrame = requestAnimationFrame(loop);
-  if (now - lastTime < FRAME_MS) return;
-  lastTime = now;
+  animFrame = requestAnimationFrame(_loop);
+
+  const delta = now - lastTime;
+  if (delta < FRAME_MS) return;
+  // Account for missed frames without accumulating huge debt
+  lastTime = now - (delta % FRAME_MS);
 
   const w = canvas.width, h = canvas.height;
   if (w === 0 || h === 0) return;
@@ -204,54 +208,52 @@ function loop(now = performance.now()) {
   _glowPhase += 0.008;
 
   if (state.lowPowerMode) {
-    // Low-power: simple dots, no glow
+    // Low-power: simple dots, no shadow / gradients
+    ctx.globalAlpha = 1;
     for (const p of particles) {
       p.update(w, h);
+      if (p.alpha <= 0.005) continue;
       ctx.globalAlpha = p.alpha * 0.5;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `hsl(${_particleHue}, ${_particleSat}%, ${_particleLit}%)`;
+      ctx.fillStyle = `hsl(${_particleHue},${_particleSat}%,${_particleLit}%)`;
       ctx.fill();
     }
     ctx.globalAlpha = 1;
     return;
   }
 
-  // ── Ambient radial gradient — breathes with _glowPhase ─────────────────
+  // ── Ambient breathing gradient ───────────────────────────────────────────
   const breathe = Math.sin(_glowPhase) * 0.025 + 0.04;
-  const grad = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.75);
-  grad.addColorStop(0, `hsla(${_particleHue}, ${_particleSat}%, ${_particleLit}%, ${breathe})`);
+  const grad    = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.75);
+  grad.addColorStop(0, `hsla(${_particleHue},${_particleSat}%,${_particleLit}%,${breathe})`);
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  // ── Secondary orb (offset, slower breathe) ────────────────────────────
+  // ── Secondary orb ────────────────────────────────────────────────────────
   const breathe2 = Math.sin(_glowPhase * 0.6 + 1.5) * 0.02 + 0.025;
-  const grad2 = ctx.createRadialGradient(w * 0.25, h * 0.35, 0, w * 0.25, h * 0.35, w * 0.4);
-  grad2.addColorStop(0, `hsla(${(_particleHue + 30) % 360}, ${_particleSat}%, ${_particleLit}%, ${breathe2})`);
+  const grad2    = ctx.createRadialGradient(w * 0.25, h * 0.35, 0, w * 0.25, h * 0.35, w * 0.4);
+  grad2.addColorStop(0, `hsla(${(_particleHue + 30) % 360},${_particleSat}%,${_particleLit}%,${breathe2})`);
   grad2.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grad2;
   ctx.fillRect(0, 0, w, h);
 
-  // ── Subtle light ray (expand mode only) ───────────────────────────────
+  // ── Expand-mode light column ─────────────────────────────────────────────
   if (expandMode) {
     const rayAlpha = Math.sin(_glowPhase * 0.4) * 0.015 + 0.02;
     ctx.save();
     ctx.globalAlpha = rayAlpha;
-    const rayGrad = ctx.createConicalGradient
-      ? null // fallback below
-      : null;
-    // Soft vertical light column
     const col = ctx.createLinearGradient(w * 0.45, 0, w * 0.55, h);
-    col.addColorStop(0, `hsla(${_particleHue}, ${_particleSat}%, 90%, 0.8)`);
-    col.addColorStop(0.5, `hsla(${_particleHue}, ${_particleSat}%, 80%, 0.3)`);
-    col.addColorStop(1, 'rgba(0,0,0,0)');
+    col.addColorStop(0,   `hsla(${_particleHue},${_particleSat}%,90%,0.8)`);
+    col.addColorStop(0.5, `hsla(${_particleHue},${_particleSat}%,80%,0.3)`);
+    col.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.fillStyle = col;
     ctx.fillRect(w * 0.35, 0, w * 0.3, h);
     ctx.restore();
   }
 
-  // ── Particles — back → front order for depth ──────────────────────────
+  // ── Particles: back → front ───────────────────────────────────────────────
   const byLayer = [[], [], []];
   for (const p of particles) byLayer[p.layer].push(p);
 
