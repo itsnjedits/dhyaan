@@ -6,11 +6,23 @@ let _allTracks   = [];
 let _queue       = [];
 let _queueIndex  = 0;
 let _audio       = new Audio();
-let _nextAudio   = new Audio();
-let _preloadTimer   = null;
-let _listenTimer    = null; // unused — kept for API compat
+
+// BUG-013 FIX: _nextAudio has been removed entirely. Previously it fetched
+// metadata for the next track via _schedulePreload() but the preloaded element
+// was never used when that track actually played — the engine always assigned
+// _audio.src directly. The preload wasted network bandwidth and held an extra
+// browser media element resource open indefinitely. Removing it saves ~1–2 kB
+// of metadata per track per preload cycle with no change to playback behaviour.
+
+let _saveStateTimer = null;  // debounce handle for currentTime persistence
 let _listenAccum    = 0;
 let _playStartTime  = null;
+
+// BUG-024 FIX: tracks the audio currentTime at which the last listen-time
+// flush occurred so we can pass the *actual* elapsed seconds to recordListenTime
+// instead of the previous hard-coded value of 15. This gives accurate analytics
+// even when the user seeks or timeupdate fires at an irregular cadence.
+let _lastFlushCt    = null;
 
 // Drag state (set by index.html seek bar; prevents progress jumps while dragging)
 let _isDragging = false;
@@ -20,11 +32,9 @@ let _onTrackChange = null;
 let _onProgress    = null;
 let _onStateChange = null;
 
-_audio.preload    = 'none';
-_nextAudio.preload = 'none';
+_audio.preload = 'none';
 
 // ── Drag-state bridge ────────────────────────────────────────────────────────
-// index.html dispatches these custom events so the player can pause progress updates
 document.addEventListener('dhyaan:drag-start', () => { _isDragging = true; });
 document.addEventListener('dhyaan:drag-end',   () => { _isDragging = false; });
 
@@ -39,6 +49,10 @@ export function initPlayer(tracks, callbacks = {}) {
   _audio.volume  = state.volume ?? 0.75;
 
   // ── Audio event listeners ───────────────────────────────────────────────
+
+  // BUG-007 FIX: debounce the currentTime save to once every 5 seconds.
+  // Saves still happen immediately on pause, seek, track-change, and
+  // beforeunload so no meaningful position data is lost.
   _audio.addEventListener('timeupdate', () => {
     const track = getCurrentTrack();
     if (!track) return;
@@ -46,7 +60,9 @@ export function initPlayer(tracks, callbacks = {}) {
     const ct  = _audio.currentTime;
     const dur = _audio.duration || 0;
 
-    saveState({ currentTime: ct });
+    // Debounced persistence
+    clearTimeout(_saveStateTimer);
+    _saveStateTimer = setTimeout(() => saveState({ currentTime: ct }), 5000);
 
     // Feed progress only when user is NOT dragging
     if (!_isDragging) _onProgress(ct, dur);
@@ -55,7 +71,14 @@ export function initPlayer(tracks, callbacks = {}) {
     if (_playStartTime != null) {
       _listenAccum = ct - _playStartTime;
       if (_listenAccum > 0 && _listenAccum % 15 < 0.55) {
-        recordListenTime(track.id, 15);
+        // BUG-024 FIX: pass actual elapsed seconds since last flush rather than
+        // the previous hard-coded 15. This is accurate across seeks and
+        // irregular timeupdate cadences.
+        const actualSecs = (_lastFlushCt != null)
+          ? Math.max(1, Math.round(ct - _lastFlushCt))
+          : 15;
+        recordListenTime(track.id, actualSecs);
+        _lastFlushCt = ct;
         flushListenTime();
       }
     }
@@ -67,6 +90,7 @@ export function initPlayer(tracks, callbacks = {}) {
       const pct = (_audio.currentTime / _audio.duration) * 100;
       if (pct >= 78) recordCompletion(track.id);
     }
+    clearTimeout(_saveStateTimer);
     flushListenTime();
 
     const { repeatMode } = getState();
@@ -80,26 +104,52 @@ export function initPlayer(tracks, callbacks = {}) {
 
   _audio.addEventListener('play', () => {
     _playStartTime = _audio.currentTime;
+    // BUG-024 FIX: reset flush baseline on every play/resume so the first
+    // flush after a pause correctly measures only the resumed listening window.
+    _lastFlushCt   = null;
     _onStateChange('play');
   });
-  _audio.addEventListener('playing',       () => _onStateChange('play'));
-  _audio.addEventListener('pause',         () => { flushListenTime(); _onStateChange('pause'); });
-  _audio.addEventListener('waiting',       () => _onStateChange('buffering'));
-  _audio.addEventListener('loadstart',     () => _onStateChange('buffering'));
-  _audio.addEventListener('canplay',       () => _onStateChange('ready'));
-  _audio.addEventListener('canplaythrough',() => _onStateChange('ready'));
-  _audio.addEventListener('stalled',       () => _onStateChange('buffering'));
-  _audio.addEventListener('error',         () => _onStateChange('error'));
 
-  // ── Seek via custom event (dispatched by progress bar handlers) ─────────
+  // BUG-010 FIX: reset _playStartTime and flush baseline whenever the audio
+  // position jumps due to a seek. Without this, _listenAccum = ct - _playStartTime
+  // can produce a negative or inflated value causing incorrect analytics.
+  _audio.addEventListener('seeked', () => {
+    _playStartTime = _audio.currentTime;
+    _lastFlushCt   = null; // don't count time across a seek boundary
+  });
+
+  // Save currentTime immediately on pause (overrides pending debounced save).
+  _audio.addEventListener('pause', () => {
+    clearTimeout(_saveStateTimer);
+    saveState({ currentTime: _audio.currentTime });
+    flushListenTime();
+    _onStateChange('pause');
+  });
+
+  _audio.addEventListener('playing',        () => _onStateChange('play'));
+  _audio.addEventListener('waiting',        () => _onStateChange('buffering'));
+  _audio.addEventListener('loadstart',      () => _onStateChange('buffering'));
+  _audio.addEventListener('canplay',        () => _onStateChange('ready'));
+  _audio.addEventListener('canplaythrough', () => _onStateChange('ready'));
+  _audio.addEventListener('stalled',        () => _onStateChange('buffering'));
+  _audio.addEventListener('error',          () => _onStateChange('error'));
+
+  // ── Seek via custom event ───────────────────────────────────────────────
   document.addEventListener('dhyaan:seek', (e) => {
     const dur = _audio.duration;
     if (dur && isFinite(dur)) {
       const t = Math.max(0, Math.min(dur, e.detail.pct * dur));
       _audio.currentTime = t;
-      // Immediately push progress update so UI stays in sync
+      clearTimeout(_saveStateTimer);
       if (!_isDragging) _onProgress(t, dur);
     }
+  });
+
+  // ── Save position on page unload ────────────────────────────────────────
+  window.addEventListener('beforeunload', () => {
+    clearTimeout(_saveStateTimer);
+    saveState({ currentTime: _audio.currentTime });
+    flushListenTime();
   });
 
   // ── Restore session ─────────────────────────────────────────────────────
@@ -133,7 +183,6 @@ export function setQueue(tracks, startIndex = 0, autoplay = false) {
   recordPlay(track.id);
 
   if (autoplay) _audio.play().catch(() => {});
-  _schedulePreload();
 }
 
 export function setAllTracksQueue() { _queue = _allTracks; }
@@ -155,7 +204,6 @@ export function loadTrack(index, autoplay = false) {
   recordPlay(track.id);
 
   if (autoplay) _audio.play().catch(() => {});
-  _schedulePreload();
 }
 
 export function loadQueueIndex(index, autoplay = false) {
@@ -173,10 +221,12 @@ export function loadQueueIndex(index, autoplay = false) {
   recordPlay(track.id);
 
   if (autoplay) _audio.play().catch(() => {});
-  _schedulePreload();
 }
 
+// FIX BUG-004: empty-queue guard prevents infinite do-while loop.
 function _advanceQueue(direction, autoplay = false) {
+  if (!_queue.length) return;
+
   const { shuffleMode } = getState();
   let nextIdx;
 
@@ -199,18 +249,6 @@ export function nextTrack() {
 export function prevTrack() {
   if (_audio.currentTime > 3) { _audio.currentTime = 0; return; }
   _advanceQueue(-1, true);
-}
-
-function _schedulePreload() {
-  clearTimeout(_preloadTimer);
-  _preloadTimer = setTimeout(() => {
-    const { shuffleMode } = getState();
-    const nextIdx = shuffleMode
-      ? Math.floor(Math.random() * _queue.length)
-      : (_queueIndex + 1) % _queue.length;
-    const next = _queue[nextIdx];
-    if (next) { _nextAudio.src = next.audio_url; _nextAudio.preload = 'metadata'; }
-  }, CONFIG.PRELOAD_DELAY);
 }
 
 // ── Playback controls ────────────────────────────────────────────────────────

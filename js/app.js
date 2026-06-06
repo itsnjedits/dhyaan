@@ -1,7 +1,8 @@
 // app.js — Dhyaan main orchestrator v2
 // Fixes: state sync, no duplicate listeners, proper seek/drag, expand mode,
 //        mobile sidebar, modal, playlist view, recommendations, volume fill,
-//        RAF cleanup, async race guards, keyboard shortcuts.
+//        RAF cleanup, async race guards, keyboard shortcuts,
+//        low-end device detection + low-power mode activation.
 
 import { CONFIG, STORAGE_KEYS } from './config.js';
 import {
@@ -26,8 +27,14 @@ import {
   renderTrackCard, updateTrackCardActive, renderMoodPills,
   showToast, updateNowPlaying, updatePlayPauseBtn,
   updateProgress, updateVolumeSliderFill, icons, formatTime,
+  // BUG-017 FIX: import the shared escHtml from ui.js — removes the duplicate
+  // private _escHtml that previously existed in both app.js and ui.js.
+  escHtml,
 } from './ui.js';
-import { initVisualizer, startVisualizer, stopVisualizer, resize, setExpandMode, setParticleColor } from './visualizer.js';
+import {
+  initVisualizer, startVisualizer, stopVisualizer,
+  resize, setExpandMode, setParticleColor, setLowPowerMode,
+} from './visualizer.js';
 
 // ── Module-level state ────────────────────────────────────────────────────────
 let _allTracks        = [];
@@ -40,6 +47,15 @@ let _controlsTimer    = null;   // timeout to hide expand-mode controls
 // Track whether we're in a playlist view (vs global library)
 let _viewingPlaylist  = false;
 
+// ── Low-end device detection ──────────────────────────────────────────────────
+function _detectLowEndDevice() {
+  const fewCores    = navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 2;
+  const lowMemory   = navigator.deviceMemory != null && navigator.deviceMemory <= 1;
+  const isMobile    = window.innerWidth <= 768 || ('ontouchstart' in window);
+  const slowNetwork = isMobile && navigator.connection?.effectiveType === '2g';
+  return fewCores || lowMemory || slowNetwork;
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   loadState();
@@ -50,10 +66,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Apply saved theme ────────────────────────────────────────────────────
   _applyTheme(state.theme || 'zen-dark');
 
+  // ── BUG-015: Low-power mode activation ───────────────────────────────────
+  const _isLowEnd      = _detectLowEndDevice();
+  const _activateLowPower = _isLowEnd || state.lowPowerMode;
+
+  if (_activateLowPower) {
+    document.body.classList.add('low-power');
+    if (_isLowEnd && !state.lowPowerMode) saveState({ lowPowerMode: true });
+  }
+
   // ── Visualizer ───────────────────────────────────────────────────────────
   const canvas = document.getElementById('particle-canvas');
   if (canvas) {
     initVisualizer(canvas);
+    if (_activateLowPower) setLowPowerMode(true);
     startVisualizer();
   }
 
@@ -70,6 +96,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('[Dhyaan] Failed to load data:', err);
     document.getElementById('track-list').innerHTML =
       `<div class="empty-state">Could not load tracks. Please check your connection.</div>`;
+    return;
+  }
+
+  if (!_allTracks.length) {
+    document.getElementById('track-list').innerHTML =
+      `<div class="empty-state">You're offline. Tracks will load when connected.</div>`;
     return;
   }
 
@@ -151,7 +183,6 @@ function _handleStateChange(state) {
   const playing = (state === 'play');
   updatePlayPauseBtn(playing);
   if (playing) startVisualizer();
-  // Don't stop visualizer on pause — it adds atmosphere
 }
 
 // ── Volume slider ─────────────────────────────────────────────────────────────
@@ -171,20 +202,12 @@ function _initVolumeSlider() {
 
 // ── Player controls ────────────────────────────────────────────────────────────
 function _initPlayerControls() {
-  // Play / Pause
-  document.getElementById('play-pause-btn')?.addEventListener('click', () => {
-    togglePlay();
-  });
-
-  // Prev / Next
+  document.getElementById('play-pause-btn')?.addEventListener('click', togglePlay);
   document.getElementById('prev-btn')?.addEventListener('click', prevTrack);
   document.getElementById('next-btn')?.addEventListener('click', nextTrack);
-
-  // Seek buttons (desktop)
   document.getElementById('seek-bwd')?.addEventListener('click', () => seekBy(-CONFIG.SEEK_SECONDS));
   document.getElementById('seek-fwd')?.addEventListener('click', () => seekBy(+CONFIG.SEEK_SECONDS));
 
-  // Shuffle
   document.getElementById('shuffle-btn')?.addEventListener('click', () => {
     const { shuffleMode } = getState();
     const next = !shuffleMode;
@@ -193,7 +216,6 @@ function _initPlayerControls() {
     showToast(next ? 'Shuffle on' : 'Shuffle off');
   });
 
-  // Repeat
   document.getElementById('repeat-btn')?.addEventListener('click', () => {
     const modes = ['none', 'all', 'one'];
     const { repeatMode } = getState();
@@ -203,7 +225,6 @@ function _initPlayerControls() {
     showToast(`Repeat: ${next === 'none' ? 'off' : next}`);
   });
 
-  // Random (surprise me)
   document.getElementById('random-btn')?.addEventListener('click', () => {
     const track = getRandomTrack(_currentMood);
     if (!track) return;
@@ -256,10 +277,7 @@ function _initSearchBar() {
 // ── Theme dots ────────────────────────────────────────────────────────────────
 function _initThemeDots() {
   document.querySelectorAll('[data-theme-btn]').forEach(dot => {
-    dot.addEventListener('click', () => {
-      const theme = dot.dataset.themeBtn;
-      _applyTheme(theme);
-    });
+    dot.addEventListener('click', () => _applyTheme(dot.dataset.themeBtn));
   });
 }
 
@@ -267,22 +285,25 @@ function _applyTheme(theme) {
   if (!CONFIG.THEMES.includes(theme)) return;
   document.body.setAttribute('data-theme', theme);
   saveState({ theme });
-  // Update active dot
   document.querySelectorAll('[data-theme-btn]').forEach(d =>
     d.classList.toggle('active', d.dataset.themeBtn === theme)
   );
 }
 
 // ── Mood bar ──────────────────────────────────────────────────────────────────
+// FIX BUG-001: named inner function replaces arguments.callee (illegal in strict mode).
 function _renderMoodBar() {
   const container = document.getElementById('mood-pills');
   if (!container) return;
-  renderMoodPills(container, CONFIG.MOODS, _currentMood, (mood) => {
+
+  function _onMoodSelect(mood) {
     _currentMood = mood;
     saveState({ selectedMood: mood });
     _renderTrackList();
-    renderMoodPills(container, CONFIG.MOODS, _currentMood, arguments.callee);
-  });
+    renderMoodPills(container, CONFIG.MOODS, _currentMood, _onMoodSelect);
+  }
+
+  renderMoodPills(container, CONFIG.MOODS, _currentMood, _onMoodSelect);
 }
 
 // ── Track list ─────────────────────────────────────────────────────────────────
@@ -290,34 +311,36 @@ function _renderTrackList() {
   const listEl = document.getElementById('track-list');
   if (!listEl) return;
 
-  // If viewing a playlist, show that instead
   if (_viewingPlaylist && _activePlaylistId) {
     _renderPlaylistView(_activePlaylistId);
     return;
   }
 
   let tracks = filterByMood(_currentMood);
-
   if (_searchQuery) tracks = searchTracks(tracks, _searchQuery);
 
   if (!tracks.length) {
     listEl.innerHTML = `<div class="empty-state">
-      ${_searchQuery ? `No results for "${_escHtml(_searchQuery)}"` : 'No tracks in this mood'}
+      ${_searchQuery ? `No results for "${escHtml(_searchQuery)}"` : 'No tracks in this mood'}
     </div>`;
     return;
   }
 
-  // Batch render to avoid layout thrashing
-  const frag        = document.createDocumentFragment();
-  const currentId   = getCurrentTrack()?.id;
+  const frag      = document.createDocumentFragment();
+  const currentId = getCurrentTrack()?.id;
 
-  tracks.forEach((track, i) => {
+  // BUG-019 FIX: set --card-delay on each card using the render-order index
+  // (not the global library index). This gives proportional stagger across ALL
+  // rendered cards (capped at 250 ms), not just the first 6 covered by the
+  // previous nth-child CSS declarations.
+  tracks.forEach((track, renderIdx) => {
     const globalIdx = _allTracks.findIndex(t => t.id === track.id);
     const card = renderTrackCard(track, globalIdx, {
       active:          track.id === currentId,
       onPlay:          (t, idx) => _playTrackFromLibrary(idx),
       onAddToPlaylist: (t)      => _showAddToPlaylistModal(t),
     });
+    card.style.setProperty('--card-delay', `${Math.min(renderIdx * 0.03, 0.25)}s`);
     frag.appendChild(card);
   });
 
@@ -332,10 +355,7 @@ function _renderPlaylistView(playlistId) {
 
   const playlists = getAllPlaylists();
   const pl        = playlists.find(p => p.id === playlistId);
-  if (!pl) {
-    _exitPlaylistView();
-    return;
-  }
+  if (!pl) { _exitPlaylistView(); return; }
 
   const plTracks = pl.trackIds
     .map(id => _allTracks.find(t => t.id === id))
@@ -348,7 +368,7 @@ function _renderPlaylistView(playlistId) {
       ${icons.back}
     </button>
     <div class="pl-header-info">
-      <div class="pl-header-name">${_escHtml(pl.name)}</div>
+      <div class="pl-header-name">${escHtml(pl.name)}</div>
       <div class="pl-header-count">${plTracks.length} track${plTracks.length !== 1 ? 's' : ''}</div>
     </div>
   `;
@@ -356,7 +376,6 @@ function _renderPlaylistView(playlistId) {
 
   const frag      = document.createDocumentFragment();
   const currentId = getCurrentTrack()?.id;
-
   frag.appendChild(header);
 
   if (!plTracks.length) {
@@ -365,8 +384,9 @@ function _renderPlaylistView(playlistId) {
     empty.textContent = 'No tracks yet — add some from the library';
     frag.appendChild(empty);
   } else {
-    plTracks.forEach((track, i) => {
-      const card = renderTrackCard(track, i, {
+    // BUG-019 FIX: stagger also applies in playlist view.
+    plTracks.forEach((track, renderIdx) => {
+      const card = renderTrackCard(track, renderIdx, {
         active:               track.id === currentId,
         onPlay:               (t, idx) => {
           setQueue(plTracks, idx, true);
@@ -379,6 +399,7 @@ function _renderPlaylistView(playlistId) {
           _renderPlaylists();
         },
       });
+      card.style.setProperty('--card-delay', `${Math.min(renderIdx * 0.03, 0.25)}s`);
       frag.appendChild(card);
     });
   }
@@ -414,7 +435,7 @@ function _renderPlaylists() {
       item.setAttribute('role', 'button');
       item.setAttribute('tabindex', '0');
       item.innerHTML = `
-        <span class="pl-name">${_escHtml(pl.name)}</span>
+        <span class="pl-name">${escHtml(pl.name)}</span>
         <span class="pl-count">${pl.trackIds.length}</span>
         <div class="pl-actions">
           <button title="Rename" aria-label="Rename playlist" class="pl-rename-btn">✎</button>
@@ -422,7 +443,6 @@ function _renderPlaylists() {
         </div>
       `;
 
-      // Open playlist
       item.addEventListener('click', (e) => {
         if (e.target.closest('.pl-actions')) return;
         _activePlaylistId = pl.id;
@@ -435,13 +455,10 @@ function _renderPlaylists() {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
       });
 
-      // Rename
       item.querySelector('.pl-rename-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         _showRenameModal(pl);
       });
-
-      // Delete
       item.querySelector('.pl-delete-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         _showDeleteModal(pl);
@@ -453,18 +470,13 @@ function _renderPlaylists() {
     container.appendChild(frag);
   }
 
-  // New playlist button
-  document.getElementById('new-playlist-btn')?.addEventListener('click', () => {
-    _showCreatePlaylistModal();
-  }, { once: true }); // we re-render so use once + always reattach below
-  // Re-attach (innerHTML resets listeners outside container)
+  // FIX BUG-003: removed dead { once: true } listener.
   _reAttachNewPlaylistBtn();
 }
 
 function _reAttachNewPlaylistBtn() {
   const btn = document.getElementById('new-playlist-btn');
   if (!btn) return;
-  // Clone to remove stale listeners
   const clone = btn.cloneNode(true);
   btn.parentNode.replaceChild(clone, btn);
   clone.addEventListener('click', _showCreatePlaylistModal);
@@ -472,7 +484,6 @@ function _reAttachNewPlaylistBtn() {
 
 // ── Play from library ─────────────────────────────────────────────────────────
 function _playTrackFromLibrary(globalIdx) {
-  // Exit playlist view so queue matches library
   if (_viewingPlaylist) _exitPlaylistView();
   setAllTracksQueue();
   loadTrack(globalIdx, true);
@@ -496,7 +507,7 @@ function _showAddToPlaylistModal(track) {
 
   const listHtml = playlists.map(pl =>
     `<button class="modal-pick-item" data-plid="${pl.id}">
-       <span class="modal-pick-name">${_escHtml(pl.name)}</span>
+       <span class="modal-pick-name">${escHtml(pl.name)}</span>
        <span class="modal-pick-sub">${pl.trackIds.length} tracks</span>
      </button>`
   ).join('');
@@ -555,7 +566,7 @@ function _showCreatePlaylistModal(trackToAdd = null) {
 function _showRenameModal(pl) {
   _showModal({
     title: 'Rename Playlist',
-    body:  `<input id="dhyaan-modal-input" type="text" value="${_escHtml(pl.name)}" maxlength="60" autocomplete="off" />`,
+    body:  `<input id="dhyaan-modal-input" type="text" value="${escHtml(pl.name)}" maxlength="60" autocomplete="off" />`,
     buttons: [
       {
         label: 'Rename', cls: 'modal-btn-accent', action: (close) => {
@@ -584,7 +595,7 @@ function _showRenameModal(pl) {
 function _showDeleteModal(pl) {
   _showModal({
     title: 'Delete Playlist',
-    body:  `<p class="modal-confirm-msg">Delete <em>"${_escHtml(pl.name)}"</em>? This cannot be undone.</p>`,
+    body:  `<p class="modal-confirm-msg">Delete <em>"${escHtml(pl.name)}"</em>? This cannot be undone.</p>`,
     buttons: [
       {
         label: 'Delete', cls: 'modal-btn-danger', action: (close) => {
@@ -608,9 +619,12 @@ function _ensureModalRoot() {
   const root = document.createElement('div');
   root.id = 'dhyaan-modal-root';
 
+  // BUG-021 FIX: added aria-labelledby="dhyaan-modal-title" so screen readers
+  // announce the dialog name when focus enters. WCAG 2.1 requires role="dialog"
+  // elements to have an accessible name via aria-labelledby or aria-label.
   root.innerHTML = `
     <div id="dhyaan-modal-backdrop">
-      <div id="dhyaan-modal-box" role="dialog" aria-modal="true">
+      <div id="dhyaan-modal-box" role="dialog" aria-modal="true" aria-labelledby="dhyaan-modal-title">
         <div id="dhyaan-modal-title"></div>
         <div id="dhyaan-modal-body"></div>
         <div id="dhyaan-modal-footer"></div>
@@ -654,7 +668,6 @@ function _showModal({ title, body, buttons = [], onMount } = {}) {
 
   if (onMount) onMount(box);
 
-  // Trap focus
   const focusable = box.querySelectorAll('button, input, [tabindex]');
   focusable[0]?.focus();
 }
@@ -671,17 +684,14 @@ function _initExpandMode() {
   document.getElementById('expand-btn')?.addEventListener('click', () => {
     _expandOpen ? _closeExpand() : _openExpand();
   });
-
   document.getElementById('collapse-btn')?.addEventListener('click', _closeExpand);
 
-  // Tap on overlay to toggle controls (mobile)
   const overlay = document.getElementById('expand-overlay');
   overlay?.addEventListener('click', (e) => {
     if (e.target.closest('button, .expand-progress-bar, .expand-reco-item')) return;
     _showExpandControls();
   });
 
-  // Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && _expandOpen) _closeExpand();
   });
@@ -698,7 +708,9 @@ function _openExpand() {
   const overlay = document.getElementById('expand-overlay');
   if (overlay) {
     overlay.setAttribute('aria-hidden', 'false');
-    overlay.focus?.();
+    // BUG-020 FIX: tabindex="-1" is now on the element in HTML, making this
+    // focus() call actually work for keyboard/screen-reader users.
+    overlay.focus({ preventScroll: true });
   }
 }
 
@@ -726,7 +738,6 @@ function _renderExpandRecos() {
   const ui = document.querySelector('.expand-ui');
   if (!ui) return;
 
-  // Remove existing reco panel
   ui.querySelector('.expand-reco-panel')?.remove();
 
   const track  = getCurrentTrack();
@@ -740,11 +751,11 @@ function _renderExpandRecos() {
     <div class="expand-reco-label">${label}</div>
     <div class="expand-reco-list">
       ${recos.map(t => `
-        <div class="expand-reco-item" data-id="${t.id}" role="button" tabindex="0" aria-label="Play ${_escHtml(t.title)}">
+        <div class="expand-reco-item" data-id="${t.id}" role="button" tabindex="0" aria-label="Play ${escHtml(t.title)}">
           <div class="expand-reco-thumb"
                style="background-image:url('${t.image_url?.low || ''}')">
           </div>
-          <div class="expand-reco-name">${_escHtml(t.title)}</div>
+          <div class="expand-reco-name">${escHtml(t.title)}</div>
         </div>
       `).join('')}
     </div>
@@ -768,7 +779,6 @@ function _renderExpandRecos() {
 
 // ── Particle colour from track ─────────────────────────────────────────────────
 function _setParticleColorFromTrack(track) {
-  // If track has explicit hue data use it, else derive from mood
   if (track.hue != null) {
     setParticleColor(track.hue, 65, 72);
     return;
@@ -786,15 +796,11 @@ function _setParticleColorFromTrack(track) {
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 function _initKeyboard() {
   document.addEventListener('keydown', (e) => {
-    // Skip if focus is inside an input/textarea
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
 
     switch (e.key) {
-      case ' ':
-        e.preventDefault();
-        togglePlay();
-        break;
+      case ' ':        e.preventDefault(); togglePlay(); break;
       case 'ArrowRight':
         if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); seekBy(+CONFIG.SEEK_SECONDS); }
         break;
@@ -811,12 +817,9 @@ function _initKeyboard() {
         setVolume(Math.max(0, getVolume() - 0.05));
         updateVolumeSliderFill(getVolume());
         break;
-      case 'n': case 'N':
-        nextTrack(); break;
-      case 'p': case 'P':
-        prevTrack(); break;
-      case 'e': case 'E':
-        _expandOpen ? _closeExpand() : _openExpand(); break;
+      case 'n': case 'N': nextTrack(); break;
+      case 'p': case 'P': prevTrack(); break;
+      case 'e': case 'E': _expandOpen ? _closeExpand() : _openExpand(); break;
       case 'f': case 'F': {
         const t = getCurrentTrack();
         if (t) {
@@ -826,9 +829,7 @@ function _initKeyboard() {
         }
         break;
       }
-      case 'Escape':
-        if (_expandOpen) _closeExpand();
-        break;
+      case 'Escape': if (_expandOpen) _closeExpand(); break;
     }
   });
 }
@@ -871,14 +872,4 @@ function _scrollToActive() {
   const listEl = document.getElementById('track-list');
   const active = listEl?.querySelector('.track-card.active');
   active?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// ── HTML escaping ─────────────────────────────────────────────────────────────
-function _escHtml(str = '') {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

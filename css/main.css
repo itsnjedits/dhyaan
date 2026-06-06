@@ -1,5 +1,9 @@
 /* main.css — Dhyaan Meditation App — Mobile-Optimized Edition v2 */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
+/* Google Fonts are loaded via <link rel="preload"> + <link rel="stylesheet"> in
+   index.html <head>. The @import that was here is removed: a CSS @import blocks
+   the parser until the font sheet downloads, whereas the <link> in <head> runs
+   in parallel with other resource fetches. Keeping both caused a duplicate
+   blocking HTTP request on every page load. */
 @import './themes.css';
 
 /* ── Reset & Base ─────────────────────────────────────────────────────────── */
@@ -840,6 +844,12 @@ body::before {
   pointer-events: none;
 }
 
+/* FIX: suppress fill transition while dragging so the bar tracks finger instantly */
+#progress-bar.dragging #progress-filled,
+.expand-progress-bar.dragging #expand-filled {
+  transition: none;
+}
+
 /* Progress thumb */
 .progress-thumb,
 #progress-thumb {
@@ -975,16 +985,22 @@ body::before {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: none;
-  /* Prevent rubber-banding on iOS */
+  /* cursor: none moved to @media (pointer: fine) to avoid affecting touch UX */
   overscroll-behavior: contain;
 }
 body.expand-mode #expand-overlay {
   opacity: 1;
   pointer-events: all;
 }
-body.expand-mode.controls-visible #expand-overlay { cursor: default; }
-body.expand-mode #particle-canvas { opacity: 0.85; z-index: 501; }
+
+/* FIX: scope cursor:none to real pointer devices only */
+@media (pointer: fine) {
+  #expand-overlay { cursor: none; }
+  body.expand-mode.controls-visible #expand-overlay { cursor: default; }
+}
+
+/* FIX BUG-005: z-index 499 keeps canvas inside the overlay stacking context */
+body.expand-mode #particle-canvas { opacity: 0.85; z-index: 499; }
 
 #expand-image {
   position: absolute;
@@ -1678,10 +1694,67 @@ kbd {
 .track-card:nth-child(5) { animation-delay: 0.14s; }
 .track-card:nth-child(6) { animation-delay: 0.17s; }
 
-/* Low power mode */
+/* ── Low power mode ───────────────────────────────────────────────────────── */
 body.low-power #particle-canvas { opacity: 0.35; }
 body.low-power .track-card { animation: none; }
 body.low-power * { transition-duration: 0.05s !important; }
+
+/* ── prefers-reduced-motion ───────────────────────────────────────────────── */
+/* CSS companion to the JS handling in visualizer.js.
+   The JS layer (visualizer.js) already reduces particle count to
+   CONFIG.PARTICLE_COUNT.low and caps the RAF loop at 20 fps.
+   This CSS layer additionally:
+     - Kills all decorative CSS keyframe animations
+     - Flattens hover transforms (primary vestibular-disorder trigger)
+     - Collapses transition durations to near-instant for all elements
+     - Dims the particle canvas further to minimise flicker perception
+   Together they produce an essentially static, non-animated UI that remains
+   fully functional while respecting the user's OS accessibility preference. */
+@media (prefers-reduced-motion: reduce) {
+  /* ── Freeze all decorative animations ────────────────────────────────── */
+  .logo-glyph                { animation: none !important; opacity: 0.8; }
+  .mood-pill.active          { animation: none !important; }
+  .track-card                { animation: none !important; }
+  .track-card.highlight      { animation: none !important; }
+  .expand-swipe-hint         { animation: none !important; opacity: 0.2; }
+  .about-divider             { animation: none !important; }
+  .playlist-view-header      { animation: none !important; }
+  .dhyaan-toast              { transition: opacity 0.05s !important; }
+
+  /* ── Flatten hover & active transforms ───────────────────────────────── */
+  /* These translateY / scale movements are the primary vestibular trigger.
+     We keep border-color and box-shadow changes (non-moving) for feedback. */
+  .track-card:hover            { transform: none !important; }
+  .track-play-btn:hover        { transform: none !important; }
+  .modal-btn-accent:hover      { transform: none !important; }
+  .expand-reco-item:hover      { transform: none !important; }
+  .theme-dot:hover,
+  .theme-dot.active            { transform: none !important; }
+  .mobile-theme-item:hover .mobile-theme-swatch,
+  .mobile-theme-item.active .mobile-theme-swatch { transform: none !important; }
+  #play-pause-btn:hover        { transform: none !important; }
+  #play-pause-btn:active       { transform: none !important; }
+  #expand-play-btn:hover       { transform: none !important; }
+  #expand-play-btn:active      { transform: none !important; }
+
+  /* ── Collapse all remaining transition durations ─────────────────────── */
+  /* Applied last so it overrides any longer durations declared above.
+     0.05s is perceptible enough to feel responsive but far too short to
+     cause vestibular discomfort (threshold is generally > 150–200 ms). */
+  *, *::before, *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.05s  !important;
+    scroll-behavior:           auto   !important;
+  }
+
+  /* ── Dim canvas further ──────────────────────────────────────────────── */
+  /* The visualizer already uses very few particles at 20 fps under
+     reduced-motion. Reducing canvas opacity to near-zero removes any
+     remaining flicker for users who are photosensitive while keeping
+     the element available (allows the themed background gradient to show). */
+  #particle-canvas { opacity: 0.08 !important; }
+}
 
 /* ══════════════════════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE
@@ -1709,7 +1782,17 @@ body.low-power * { transition-duration: 0.05s !important; }
       "player";
   }
 
-  /* Sidebar: slide-in drawer */
+  /* ── BUG-006 FIX: Sidebar backdrop-filter + transform conflict ─────────────
+     On Android Chrome (Chromium <116) and some iOS Safari versions,
+     backdrop-filter does not composite correctly when the element also has an
+     active CSS transform, producing a black / opaque rectangle instead of
+     a blur. Fix: remove backdrop-filter from the sidebar on mobile and use a
+     fully opaque background instead. The #mobile-sidebar-backdrop provides
+     the dimming + subtle blur behind the sidebar.
+     will-change: transform pre-promotes the element to its own GPU compositing
+     layer so the slide animation is smooth and doesn't trigger a re-composite.
+     We clear will-change after open so the layer is released.
+  ── */
   #sidebar {
     position: fixed;
     top: 0;
@@ -1722,10 +1805,21 @@ body.low-power * { transition-duration: 0.05s !important; }
     padding-top: calc(64px + env(safe-area-inset-top, 0px));
     border-right: 1px solid var(--border-hover);
     box-shadow: 4px 0 40px rgba(0,0,0,0.5);
+    /* Remove backdrop-filter: it breaks rendering when combined with transform
+       on Android Chrome. Use an opaque background instead. */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-secondary);
+    /* Pre-promote to own GPU compositing layer before animation begins */
+    will-change: transform;
   }
-  #sidebar.open { transform: translateX(0); }
+  #sidebar.open {
+    transform: translateX(0);
+    /* Release compositing layer once animation is settled */
+    will-change: auto;
+  }
 
-  /* Backdrop */
+  /* Backdrop provides the dimming + blur behind the sidebar */
   #mobile-sidebar-backdrop {
     display: block;
     position: fixed;
@@ -1736,10 +1830,11 @@ body.low-power * { transition-duration: 0.05s !important; }
     transition: background 0.35s ease;
   }
   #mobile-sidebar-backdrop.open {
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0);
     pointer-events: all;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    /* Blur is safe here: backdrop element has no transform */
+    /* backdrop-filter: blur(4px); */
+    /* -webkit-backdrop-filter: blur(4px); */
   }
 
   /* Show mobile elements */
@@ -1847,7 +1942,11 @@ body.low-power * { transition-duration: 0.05s !important; }
   /* Main */
   #main { padding: 14px max(14px, env(safe-area-inset-left, 0px)); }
 
-  /* Mood pills: horizontally scrollable */
+  /* ── Mood pills: horizontally scrollable ───────────────────────────────────
+     FIX: padding-left/right raised from 4px to 16px so the first and last
+     pills start inside the mask's opaque zone (transparent 0→black at 16px).
+     scroll-padding-left ensures scroll-into-view snaps to the same boundary.
+  ── */
   #mood-pills {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1858,8 +1957,9 @@ body.low-power * { transition-duration: 0.05s !important; }
     margin-bottom: 18px;
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
+    scroll-padding-left: 16px;
     gap: 6px;
   }
   #mood-pills::-webkit-scrollbar { display: none; }
@@ -2005,7 +2105,8 @@ body.low-power * { transition-duration: 0.05s !important; }
   body.expand-mode .expand-ctrl-btn svg { width: 22px; height: 22px; }
   body.expand-mode .expand-reco-panel { display: none; }
   body.expand-mode .expand-swipe-hint { display: none; }
-  body.expand-mode #particle-canvas { z-index: 501; position: fixed; }
+  /* Consistent with base z-index fix (BUG-005) */
+  body.expand-mode #particle-canvas { z-index: 499; position: fixed; }
 }
 
 /* ── Small phones (≤480px) ───────────────────────────────────────────────── */

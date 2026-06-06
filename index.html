@@ -47,7 +47,12 @@
 <div id="mobile-sidebar-backdrop" aria-hidden="true"></div>
 
 <!-- ── Expand mode overlay ───────────────────────────────────────────────── -->
-<div id="expand-overlay" role="dialog" aria-label="Immersive player" aria-modal="true" aria-hidden="true">
+<!-- BUG-020 FIX: tabindex="-1" makes the element programmatically focusable
+     so app.js's overlay.focus() call actually works. Without it, focus() on
+     a non-interactive element silently fails, breaking keyboard/AT navigation
+     when the immersive overlay opens. -->
+<div id="expand-overlay" role="dialog" aria-label="Immersive player"
+     aria-modal="true" aria-hidden="true" tabindex="-1">
   <img id="expand-image" src="" alt="Album art" draggable="false" />
   <div class="expand-gradient"></div>
 
@@ -123,7 +128,7 @@
         <div class="theme-dot" data-theme-btn="moonlight"       title="Moonlight Silver" role="button" tabindex="0" aria-label="Moonlight theme"></div>
       </div>
 
-      <!-- Mobile menu button (shown on ≤768px) -->
+      <!-- Mobile menu button -->
       <button id="mobile-menu-btn" aria-label="Open playlists and themes" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>
       </button>
@@ -131,48 +136,58 @@
   </header>
 
   <!-- Sidebar -->
-  <aside id="sidebar" aria-label="Playlists and settings">
-    <!-- Mobile-only close button -->
+  <aside id="sidebar" tabindex="-1" aria-label="Playlists and settings">
     <button id="sidebar-close-btn" aria-label="Close panel" class="sidebar-close-btn-hidden">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
 
-    <!-- Mobile-only sidebar header -->
     <div id="sidebar-header-mobile" class="sidebar-mobile-header-hidden">Sanctuary</div>
 
     <!-- Mobile-only theme panel -->
     <div id="mobile-theme-panel" class="mobile-theme-panel-hidden">
       <div class="mobile-theme-label">Atmosphere</div>
       <div class="mobile-theme-grid">
-        <div class="mobile-theme-item" data-theme-mobile="zen-dark">
+        <!-- BUG-022 FIX: added role="button", tabindex="0", and aria-label to
+             every mobile theme item. Previously these were plain divs with no
+             semantic meaning, making them invisible to screen readers and
+             inaccessible to keyboard-only users. -->
+        <div class="mobile-theme-item" data-theme-mobile="zen-dark"
+             role="button" tabindex="0" aria-label="Switch to Zen Dark theme">
           <div class="mobile-theme-swatch" style="background:#3ddc84"></div>
           <span class="mobile-theme-name">Zen Dark</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="night-blue">
+        <div class="mobile-theme-item" data-theme-mobile="night-blue"
+             role="button" tabindex="0" aria-label="Switch to Night Blue theme">
           <div class="mobile-theme-swatch" style="background:#5b8dee"></div>
           <span class="mobile-theme-name">Night Blue</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="cosmic-purple">
+        <div class="mobile-theme-item" data-theme-mobile="cosmic-purple"
+             role="button" tabindex="0" aria-label="Switch to Cosmic Purple theme">
           <div class="mobile-theme-swatch" style="background:#a78bfa"></div>
           <span class="mobile-theme-name">Cosmic</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="forest-calm">
+        <div class="mobile-theme-item" data-theme-mobile="forest-calm"
+             role="button" tabindex="0" aria-label="Switch to Forest Calm theme">
           <div class="mobile-theme-swatch" style="background:#86efac"></div>
           <span class="mobile-theme-name">Forest</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="spiritual-green">
+        <div class="mobile-theme-item" data-theme-mobile="spiritual-green"
+             role="button" tabindex="0" aria-label="Switch to Spiritual Green theme">
           <div class="mobile-theme-swatch" style="background:#6ee7b7"></div>
           <span class="mobile-theme-name">Spiritual</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="sunset-gold">
+        <div class="mobile-theme-item" data-theme-mobile="sunset-gold"
+             role="button" tabindex="0" aria-label="Switch to Sunset Gold theme">
           <div class="mobile-theme-swatch" style="background:#f59e0b"></div>
           <span class="mobile-theme-name">Sunset</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="rose-pink">
+        <div class="mobile-theme-item" data-theme-mobile="rose-pink"
+             role="button" tabindex="0" aria-label="Switch to Rose Pink theme">
           <div class="mobile-theme-swatch" style="background:#f472b6"></div>
           <span class="mobile-theme-name">Rose</span>
         </div>
-        <div class="mobile-theme-item" data-theme-mobile="moonlight">
+        <div class="mobile-theme-item" data-theme-mobile="moonlight"
+             role="button" tabindex="0" aria-label="Switch to Moonlight theme">
           <div class="mobile-theme-swatch" style="background:#cbd5e1"></div>
           <span class="mobile-theme-name">Moonlight</span>
         </div>
@@ -190,10 +205,7 @@
 
   <!-- Main content -->
   <main id="main">
-    <!-- Mood pills -->
     <div id="mood-pills" role="group" aria-label="Filter by mood"></div>
-
-    <!-- Track grid -->
     <div id="track-list" role="list" aria-label="Meditation tracks">
       <div class="empty-state">Loading stillness…</div>
     </div>
@@ -201,7 +213,6 @@
 
   <!-- Player bar -->
   <footer id="player" aria-label="Music player">
-    <!-- Now playing + mobile expand (top row on mobile) -->
     <div class="player-top-row">
       <div class="np-info">
         <div class="np-thumb">
@@ -212,60 +223,42 @@
           <div id="np-moods">―</div>
         </div>
       </div>
-      <!-- Mobile-only expand button -->
       <button class="player-expand-mobile mobile-only" id="expand-btn-mobile"
               aria-label="Immersive mode" title="Immersive mode">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
       </button>
     </div>
 
-    <!-- Controls -->
     <div class="player-controls">
       <div class="ctrl-btns">
-        <!-- Shuffle -->
         <button class="ctrl-btn" id="shuffle-btn" aria-label="Shuffle" title="Shuffle">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         </button>
-
-        <!-- Seek back -->
         <button class="ctrl-btn seek-btn desktop-only" id="seek-bwd" aria-label="Seek back 10s" title="−10s">
           <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
           <span>10</span>
         </button>
-
-        <!-- Previous -->
         <button class="ctrl-btn" id="prev-btn" aria-label="Previous track">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
-
-        <!-- Play/Pause -->
         <button id="play-pause-btn" aria-label="Play / Pause">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </button>
-
-        <!-- Next -->
         <button class="ctrl-btn" id="next-btn" aria-label="Next track">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
-
-        <!-- Seek forward -->
         <button class="ctrl-btn seek-btn desktop-only" id="seek-fwd" aria-label="Seek forward 10s" title="+10s">
           <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
           <span>10</span>
         </button>
-
-        <!-- Repeat -->
         <button class="ctrl-btn" id="repeat-btn" aria-label="Repeat" title="Repeat">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
         </button>
-
-        <!-- Random -->
         <button class="ctrl-btn" id="random-btn" aria-label="Random meditation" title="Random track">
           <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.5"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
         </button>
       </div>
 
-      <!-- Progress bar with thumb -->
       <div class="progress-wrap">
         <span class="time-label" id="current-time">0:00</span>
         <div id="progress-bar" class="progress-bar-track" role="slider"
@@ -278,7 +271,6 @@
       </div>
     </div>
 
-    <!-- Right controls (desktop only) -->
     <div class="player-right desktop-only">
       <div class="volume-wrap">
         <span class="vol-icon" aria-hidden="true">
@@ -287,7 +279,6 @@
         <input id="volume-slider" type="range" min="0" max="100" value="75"
                aria-label="Volume" autocomplete="off" />
       </div>
-
       <button id="expand-btn" aria-label="Immersive mode" title="Immersive mode (E)">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
       </button>
@@ -302,18 +293,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── Register Service Worker ──────────────────────────────────────────────
+  // BUG-018 FIX: removed the redundant postMessage('skipWaiting') call.
+  // sw.js already calls self.skipWaiting() in its 'install' event, so any new
+  // SW version takes over immediately without waiting. The updatefound +
+  // statechange handler that sent the postMessage was therefore dead code —
+  // by the time 'installed' fired, skipWaiting had already run, meaning the
+  // message was sent to a SW that had already skipped waiting on its own.
+  // Removing it eliminates the double-skip and simplifies the registration.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .then(reg => {
-        reg.addEventListener('updatefound', () => {
-          const nw = reg.installing;
-          nw.addEventListener('statechange', () => {
-            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-              nw.postMessage('skipWaiting');
-            }
-          });
-        });
-      })
       .catch(err => console.warn('[SW] Registration failed:', err));
   }
 
@@ -326,37 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('play-pause-btn')?.click());
   document.getElementById('expand-btn-mobile')?.addEventListener('click', () =>
     document.getElementById('expand-btn')?.click());
-
-  // ── Sync expand overlay from player ─────────────────────────────────────
-  const progressFilled = document.getElementById('progress-filled');
-  if (progressFilled) {
-    const syncExpandUI = () => {
-      const w   = progressFilled.style.width;
-      const ct  = document.getElementById('current-time')?.textContent;
-      const dur = document.getElementById('duration')?.textContent;
-      const ef  = document.getElementById('expand-filled');
-      const et  = document.getElementById('expand-thumb');
-
-      if (ef) {
-        ef.style.width = w;
-        // Sync thumb position
-        if (et) et.style.left = w;
-      }
-      if (ct)  document.getElementById('expand-current').textContent = ct;
-      if (dur) document.getElementById('expand-duration').textContent = dur;
-
-      // Keep ARIA values in sync
-      const pct = parseFloat(w) || 0;
-      document.getElementById('progress-bar')?.setAttribute('aria-valuenow', Math.round(pct));
-      document.getElementById('expand-progress-bar')?.setAttribute('aria-valuenow', Math.round(pct));
-
-      const title = document.getElementById('np-title')?.textContent;
-      const moods = document.getElementById('np-moods')?.textContent;
-      if (title) document.getElementById('expand-title').textContent = title;
-      if (moods) document.getElementById('expand-moods').textContent = moods;
-    };
-    new MutationObserver(syncExpandUI).observe(progressFilled, { attributes: true, attributeFilter: ['style'] });
-  }
 
   // ── Unified progress seek helper ─────────────────────────────────────────
   function getSeekPct(e, barEl) {
@@ -385,19 +342,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (thumb) thumb.style.left = pctStr;
     }
 
-    // Mouse
     bar.addEventListener('mousedown', (e) => {
       e.preventDefault();
       dragging = true;
       bar.classList.add('dragging');
       document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
-      const pct = getSeekPct(e, bar);
-      updateVisual(pct);
+      updateVisual(getSeekPct(e, bar));
     });
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
-      const pct = getSeekPct(e, bar);
-      updateVisual(pct);
+      updateVisual(getSeekPct(e, bar));
     });
     document.addEventListener('mouseup', (e) => {
       if (!dragging) return;
@@ -409,19 +363,16 @@ document.addEventListener('DOMContentLoaded', () => {
       document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
     });
 
-    // Touch
     bar.addEventListener('touchstart', (e) => {
       dragging = true;
       bar.classList.add('dragging');
       document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
-      const pct = getSeekPct(e, bar);
-      updateVisual(pct);
+      updateVisual(getSeekPct(e, bar));
     }, { passive: true });
     bar.addEventListener('touchmove', (e) => {
       if (!dragging) return;
       e.preventDefault();
-      const pct = getSeekPct(e, bar);
-      updateVisual(pct);
+      updateVisual(getSeekPct(e, bar));
     }, { passive: false });
     bar.addEventListener('touchend', (e) => {
       if (!dragging) return;
@@ -434,18 +385,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
     }, { passive: true });
 
-    // Keyboard accessibility
     bar.addEventListener('keydown', (e) => {
       const current = parseFloat(bar.getAttribute('aria-valuenow') || 0) / 100;
       let pct = current;
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-        pct = Math.min(1, current + 0.02);
-        e.preventDefault();
+        pct = Math.min(1, current + 0.02); e.preventDefault();
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-        pct = Math.max(0, current - 0.02);
-        e.preventDefault();
-      } else if (e.key === 'Home') { pct = 0; e.preventDefault(); }
-      else if (e.key === 'End') { pct = 1; e.preventDefault(); }
+        pct = Math.max(0, current - 0.02); e.preventDefault();
+      } else if (e.key === 'Home')  { pct = 0; e.preventDefault(); }
+      else if  (e.key === 'End')   { pct = 1; e.preventDefault(); }
       else return;
       updateVisual(pct);
       doSeek(pct);
@@ -484,8 +432,12 @@ document.addEventListener('DOMContentLoaded', () => {
     backdrop.setAttribute('aria-hidden', 'false');
     menuBtn?.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
-    // Trap scroll
-    sidebar.focus({ preventScroll: true });
+    setTimeout(() => {
+      const firstFocusable = sidebar.querySelector(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      (firstFocusable || sidebar).focus({ preventScroll: true });
+    }, 400);
   }
 
   function closeSidebar() {
@@ -494,24 +446,27 @@ document.addEventListener('DOMContentLoaded', () => {
     backdrop.setAttribute('aria-hidden', 'true');
     menuBtn?.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
+    menuBtn?.focus({ preventScroll: true });
   }
 
   function applyMobileUI() {
     const mobile = isMobile();
-    // Use class toggling instead of inline style to avoid conflicts
     closeBtn?.classList.toggle('sidebar-close-btn-hidden', !mobile);
     sidebarHdr?.classList.toggle('sidebar-mobile-header-hidden', !mobile);
     themePanel?.classList.toggle('mobile-theme-panel-hidden', !mobile);
     expandMobile?.classList.toggle('mobile-only-hidden', !mobile);
-
-    if (!mobile) {
-      closeSidebar();
-    }
+    if (!mobile) closeSidebar();
   }
 
   menuBtn?.addEventListener('click', openSidebar);
   closeBtn?.addEventListener('click', closeSidebar);
   backdrop?.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isMobile() && sidebar.classList.contains('open')) {
+      closeSidebar();
+    }
+  });
 
   // Swipe left to close sidebar
   let _sidebarTouchStartX = 0;
@@ -525,14 +480,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Mobile theme selection ───────────────────────────────────────────────
   document.querySelectorAll('.mobile-theme-item').forEach(item => {
-    item.addEventListener('click', () => {
+    const activate = () => {
       const theme = item.dataset.themeMobile;
       if (!theme) return;
-      const desktopDot = document.querySelector(`[data-theme-btn="${theme}"]`);
-      if (desktopDot) desktopDot.click();
+      document.querySelector(`[data-theme-btn="${theme}"]`)?.click();
       document.querySelectorAll('.mobile-theme-item').forEach(i => i.classList.remove('active'));
       item.classList.add('active');
       setTimeout(closeSidebar, 280);
+    };
+    item.addEventListener('click', activate);
+    // BUG-022 FIX: keyboard support for the now-accessible role="button" items
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
     });
   });
 
@@ -542,14 +501,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const themeObserver = new MutationObserver(() => {
-    const theme = document.body.getAttribute('data-theme');
-    if (theme) syncMobileThemeActive(theme);
-  });
-  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+  // BUG-012 FIX: consolidated into a single MutationObserver handling both
+  // mobile theme highlight sync and meta theme-color update.
+  const themeColors = {
+    'zen-dark': '#0a0f0d', 'night-blue': '#080b14', 'cosmic-purple': '#0a080f',
+    'forest-calm': '#050e08', 'spiritual-green': '#080e0a', 'sunset-gold': '#0f0b04',
+    'rose-pink': '#0f080d', 'moonlight': '#08090c',
+  };
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]:not([media])');
 
-  const initialTheme = document.body.getAttribute('data-theme') || 'zen-dark';
-  syncMobileThemeActive(initialTheme);
+  new MutationObserver(() => {
+    const theme = document.body.getAttribute('data-theme');
+    if (!theme) return;
+    syncMobileThemeActive(theme);
+    if (themeColorMeta && themeColors[theme]) {
+      themeColorMeta.setAttribute('content', themeColors[theme]);
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+  syncMobileThemeActive(document.body.getAttribute('data-theme') || 'zen-dark');
 
   applyMobileUI();
   window.addEventListener('resize', applyMobileUI);
@@ -559,34 +529,13 @@ document.addEventListener('DOMContentLoaded', () => {
   expandOverlay?.addEventListener('click', (e) => {
     if (!isMobile()) return;
     const isControl = e.target.closest('button, .expand-progress-bar, .expand-reco-item');
-    if (!isControl) {
-      document.body.classList.toggle('controls-visible');
-    }
+    if (!isControl) document.body.classList.toggle('controls-visible');
   });
 
   // ── Prevent pull-to-refresh on expand overlay ───────────────────────────
   expandOverlay?.addEventListener('touchmove', (e) => {
     if (!e.target.closest('.expand-reco-list')) e.preventDefault();
   }, { passive: false });
-
-  // ── Update meta theme-color on theme change ──────────────────────────────
-  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-  const themeColors = {
-    'zen-dark':        '#0a0f0d',
-    'night-blue':      '#080b14',
-    'cosmic-purple':   '#0a080f',
-    'forest-calm':     '#050e08',
-    'spiritual-green': '#080e0a',
-    'sunset-gold':     '#0f0b04',
-    'rose-pink':       '#0f080d',
-    'moonlight':       '#08090c',
-  };
-  new MutationObserver(() => {
-    const theme = document.body.getAttribute('data-theme');
-    if (themeColorMeta && theme && themeColors[theme]) {
-      themeColorMeta.setAttribute('content', themeColors[theme]);
-    }
-  }).observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
 });
 </script>
