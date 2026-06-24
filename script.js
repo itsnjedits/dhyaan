@@ -2048,10 +2048,27 @@ function _initExpandMobile() {
 
 // ── Service Worker ────────────────────────────────────────────────────────────
 function _registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js', { scope: '/' })
-      .catch(err => console.warn('[SW] Registration failed:', err));
-  }
+
+    if (!('serviceWorker' in navigator)) return;
+
+    window.addEventListener('load', async () => {
+
+        try {
+
+            await navigator.serviceWorker.register('./sw.js');
+
+            console.log('✅ Service Worker Registered');
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+        }
+
+    });
+
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
