@@ -22,20 +22,23 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="32x32"  href="/assets/icons/icon-96.png" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Dhyaan — A Living Meditation Experience" />
+  <meta property="og:title"       content="Dhyaan — A Living Meditation Experience" />
   <meta property="og:description" content="Immersive ambient soundscapes for deep focus, healing, and stillness." />
-  <meta property="og:type" content="website" />
+  <meta property="og:type"        content="website" />
 
   <title>Dhyaan — A Living Meditation Experience</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" />
 
+  <link rel="stylesheet" href="./css/themes.css" />
   <link rel="stylesheet" href="./css/main.css" />
 </head>
 <body data-theme="zen-dark">
@@ -47,10 +50,9 @@
 <div id="mobile-sidebar-backdrop" aria-hidden="true"></div>
 
 <!-- ── Expand mode overlay ───────────────────────────────────────────────── -->
-<!-- BUG-020 FIX: tabindex="-1" makes the element programmatically focusable
-     so app.js's overlay.focus() call actually works. Without it, focus() on
-     a non-interactive element silently fails, breaking keyboard/AT navigation
-     when the immersive overlay opens. -->
+<!-- tabindex="-1" makes the element programmatically focusable so
+     overlay.focus() works for keyboard/AT navigation when immersive
+     mode opens. -->
 <div id="expand-overlay" role="dialog" aria-label="Immersive player"
      aria-modal="true" aria-hidden="true" tabindex="-1">
   <img id="expand-image" src="" alt="Album art" draggable="false" />
@@ -90,7 +92,7 @@
 
     <div class="expand-swipe-hint">tap to show controls</div>
 
-    <!-- Recommendations panel (injected by app.js) -->
+    <!-- Recommendations panel injected by dhyaan.js -->
   </div>
 </div>
 
@@ -147,10 +149,6 @@
     <div id="mobile-theme-panel" class="mobile-theme-panel-hidden">
       <div class="mobile-theme-label">Atmosphere</div>
       <div class="mobile-theme-grid">
-        <!-- BUG-022 FIX: added role="button", tabindex="0", and aria-label to
-             every mobile theme item. Previously these were plain divs with no
-             semantic meaning, making them invisible to screen readers and
-             inaccessible to keyboard-only users. -->
         <div class="mobile-theme-item" data-theme-mobile="zen-dark"
              role="button" tabindex="0" aria-label="Switch to Zen Dark theme">
           <div class="mobile-theme-swatch" style="background:#3ddc84"></div>
@@ -265,7 +263,7 @@
              aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
              tabindex="0">
           <div id="progress-filled" class="progress-bar-fill"></div>
-          <div id="progress-thumb" class="progress-thumb"></div>
+          <div id="progress-thumb"  class="progress-thumb"></div>
         </div>
         <span class="time-label" id="duration">0:00</span>
       </div>
@@ -287,258 +285,8 @@
 
 </div><!-- #app -->
 
-<script type="module" src="./js/app.js"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-
-  // ── Register Service Worker ──────────────────────────────────────────────
-  // BUG-018 FIX: removed the redundant postMessage('skipWaiting') call.
-  // sw.js already calls self.skipWaiting() in its 'install' event, so any new
-  // SW version takes over immediately without waiting. The updatefound +
-  // statechange handler that sent the postMessage was therefore dead code —
-  // by the time 'installed' fired, skipWaiting had already run, meaning the
-  // message was sent to a SW that had already skipped waiting on its own.
-  // Removing it eliminates the double-skip and simplifies the registration.
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .catch(err => console.warn('[SW] Registration failed:', err));
-  }
-
-  // ── Expand overlay delegates ─────────────────────────────────────────────
-  document.getElementById('expand-prev')?.addEventListener('click', () =>
-    document.getElementById('prev-btn')?.click());
-  document.getElementById('expand-next')?.addEventListener('click', () =>
-    document.getElementById('next-btn')?.click());
-  document.getElementById('expand-play-btn')?.addEventListener('click', () =>
-    document.getElementById('play-pause-btn')?.click());
-  document.getElementById('expand-btn-mobile')?.addEventListener('click', () =>
-    document.getElementById('expand-btn')?.click());
-
-  // ── Unified progress seek helper ─────────────────────────────────────────
-  function getSeekPct(e, barEl) {
-    const rect = barEl.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-  }
-
-  function bindSeekBar(barId) {
-    const bar = document.getElementById(barId);
-    if (!bar) return;
-
-    let dragging = false;
-
-    function doSeek(pct) {
-      document.dispatchEvent(new CustomEvent('dhyaan:seek', { detail: { pct } }));
-    }
-
-    function updateVisual(pct) {
-      const fillId  = barId === 'progress-bar' ? 'progress-filled' : 'expand-filled';
-      const thumbId = barId === 'progress-bar' ? 'progress-thumb'  : 'expand-thumb';
-      const fill  = document.getElementById(fillId);
-      const thumb = document.getElementById(thumbId);
-      const pctStr = `${(pct * 100).toFixed(2)}%`;
-      if (fill)  fill.style.width = pctStr;
-      if (thumb) thumb.style.left = pctStr;
-    }
-
-    bar.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      dragging = true;
-      bar.classList.add('dragging');
-      document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
-      updateVisual(getSeekPct(e, bar));
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      updateVisual(getSeekPct(e, bar));
-    });
-    document.addEventListener('mouseup', (e) => {
-      if (!dragging) return;
-      dragging = false;
-      bar.classList.remove('dragging');
-      const pct = getSeekPct(e, bar);
-      updateVisual(pct);
-      doSeek(pct);
-      document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
-    });
-
-    bar.addEventListener('touchstart', (e) => {
-      dragging = true;
-      bar.classList.add('dragging');
-      document.dispatchEvent(new CustomEvent('dhyaan:drag-start'));
-      updateVisual(getSeekPct(e, bar));
-    }, { passive: true });
-    bar.addEventListener('touchmove', (e) => {
-      if (!dragging) return;
-      e.preventDefault();
-      updateVisual(getSeekPct(e, bar));
-    }, { passive: false });
-    bar.addEventListener('touchend', (e) => {
-      if (!dragging) return;
-      dragging = false;
-      bar.classList.remove('dragging');
-      const touch = e.changedTouches[0];
-      const pct = Math.max(0, Math.min(1, (touch.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth));
-      updateVisual(pct);
-      doSeek(pct);
-      document.dispatchEvent(new CustomEvent('dhyaan:drag-end'));
-    }, { passive: true });
-
-    bar.addEventListener('keydown', (e) => {
-      const current = parseFloat(bar.getAttribute('aria-valuenow') || 0) / 100;
-      let pct = current;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-        pct = Math.min(1, current + 0.02); e.preventDefault();
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-        pct = Math.max(0, current - 0.02); e.preventDefault();
-      } else if (e.key === 'Home')  { pct = 0; e.preventDefault(); }
-      else if  (e.key === 'End')   { pct = 1; e.preventDefault(); }
-      else return;
-      updateVisual(pct);
-      doSeek(pct);
-    });
-  }
-
-  bindSeekBar('progress-bar');
-  bindSeekBar('expand-progress-bar');
-
-  // ── Logo keyboard accessibility ──────────────────────────────────────────
-  document.querySelector('.logo')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
-  });
-
-  // ── Theme dot keyboard accessibility ────────────────────────────────────
-  document.querySelectorAll('.theme-dot').forEach(dot => {
-    dot.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dot.click(); }
-    });
-  });
-
-  // ── Mobile sidebar ───────────────────────────────────────────────────────
-  const sidebar      = document.getElementById('sidebar');
-  const backdrop     = document.getElementById('mobile-sidebar-backdrop');
-  const menuBtn      = document.getElementById('mobile-menu-btn');
-  const closeBtn     = document.getElementById('sidebar-close-btn');
-  const sidebarHdr   = document.getElementById('sidebar-header-mobile');
-  const themePanel   = document.getElementById('mobile-theme-panel');
-  const expandMobile = document.getElementById('expand-btn-mobile');
-
-  function isMobile() { return window.innerWidth <= 768; }
-
-  function openSidebar() {
-    sidebar.classList.add('open');
-    backdrop.classList.add('open');
-    backdrop.setAttribute('aria-hidden', 'false');
-    menuBtn?.setAttribute('aria-expanded', 'true');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => {
-      const firstFocusable = sidebar.querySelector(
-        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      (firstFocusable || sidebar).focus({ preventScroll: true });
-    }, 400);
-  }
-
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    backdrop.classList.remove('open');
-    backdrop.setAttribute('aria-hidden', 'true');
-    menuBtn?.setAttribute('aria-expanded', 'false');
-    document.body.style.overflow = '';
-    menuBtn?.focus({ preventScroll: true });
-  }
-
-  function applyMobileUI() {
-    const mobile = isMobile();
-    closeBtn?.classList.toggle('sidebar-close-btn-hidden', !mobile);
-    sidebarHdr?.classList.toggle('sidebar-mobile-header-hidden', !mobile);
-    themePanel?.classList.toggle('mobile-theme-panel-hidden', !mobile);
-    expandMobile?.classList.toggle('mobile-only-hidden', !mobile);
-    if (!mobile) closeSidebar();
-  }
-
-  menuBtn?.addEventListener('click', openSidebar);
-  closeBtn?.addEventListener('click', closeSidebar);
-  backdrop?.addEventListener('click', closeSidebar);
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isMobile() && sidebar.classList.contains('open')) {
-      closeSidebar();
-    }
-  });
-
-  // Swipe left to close sidebar
-  let _sidebarTouchStartX = 0;
-  sidebar.addEventListener('touchstart', (e) => {
-    _sidebarTouchStartX = e.touches[0].clientX;
-  }, { passive: true });
-  sidebar.addEventListener('touchend', (e) => {
-    const dx = e.changedTouches[0].clientX - _sidebarTouchStartX;
-    if (dx < -50 && isMobile()) closeSidebar();
-  }, { passive: true });
-
-  // ── Mobile theme selection ───────────────────────────────────────────────
-  document.querySelectorAll('.mobile-theme-item').forEach(item => {
-    const activate = () => {
-      const theme = item.dataset.themeMobile;
-      if (!theme) return;
-      document.querySelector(`[data-theme-btn="${theme}"]`)?.click();
-      document.querySelectorAll('.mobile-theme-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-      setTimeout(closeSidebar, 280);
-    };
-    item.addEventListener('click', activate);
-    // BUG-022 FIX: keyboard support for the now-accessible role="button" items
-    item.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
-    });
-  });
-
-  function syncMobileThemeActive(theme) {
-    document.querySelectorAll('.mobile-theme-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.themeMobile === theme);
-    });
-  }
-
-  // BUG-012 FIX: consolidated into a single MutationObserver handling both
-  // mobile theme highlight sync and meta theme-color update.
-  const themeColors = {
-    'zen-dark': '#0a0f0d', 'night-blue': '#080b14', 'cosmic-purple': '#0a080f',
-    'forest-calm': '#050e08', 'spiritual-green': '#080e0a', 'sunset-gold': '#0f0b04',
-    'rose-pink': '#0f080d', 'moonlight': '#08090c',
-  };
-  const themeColorMeta = document.querySelector('meta[name="theme-color"]:not([media])');
-
-  new MutationObserver(() => {
-    const theme = document.body.getAttribute('data-theme');
-    if (!theme) return;
-    syncMobileThemeActive(theme);
-    if (themeColorMeta && themeColors[theme]) {
-      themeColorMeta.setAttribute('content', themeColors[theme]);
-    }
-  }).observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
-
-  syncMobileThemeActive(document.body.getAttribute('data-theme') || 'zen-dark');
-
-  applyMobileUI();
-  window.addEventListener('resize', applyMobileUI);
-
-  // ── Expand overlay: tap to show/hide controls on mobile ─────────────────
-  const expandOverlay = document.getElementById('expand-overlay');
-  expandOverlay?.addEventListener('click', (e) => {
-    if (!isMobile()) return;
-    const isControl = e.target.closest('button, .expand-progress-bar, .expand-reco-item');
-    if (!isControl) document.body.classList.toggle('controls-visible');
-  });
-
-  // ── Prevent pull-to-refresh on expand overlay ───────────────────────────
-  expandOverlay?.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('.expand-reco-list')) e.preventDefault();
-  }, { passive: false });
-
-});
-</script>
+<!-- Single master script — all modules merged, no separate files needed -->
+<script type="module" src="./script.js"></script>
 
 </body>
 </html>
