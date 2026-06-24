@@ -2049,7 +2049,7 @@ function _initExpandMobile() {
 // ── Service Worker ────────────────────────────────────────────────────────────
 function _registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    navigator.serviceWorker.register('./sw.js', { scope: '/' })
       .catch(err => console.warn('[SW] Registration failed:', err));
   }
 }
