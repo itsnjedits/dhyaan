@@ -1,33 +1,30 @@
 // sw.js — Dhyaan Service Worker
 // Cache strategy: cache-first for assets, network-first for data
 
-const CACHE_VERSION = 'dhyaan-v1';
+const CACHE_VERSION = 'dhyaan-v2';
+
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const AUDIO_CACHE  = `${CACHE_VERSION}-audio`;
 
 const STATIC_ASSETS = [
+
   '/',
+
   '/index.html',
+
   '/script.js',
+
+  '/manifest.json',
+
   '/css/main.css',
   '/css/themes.css',
-  '/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap',
-];
 
-// ── Install ──────────────────────────────────────────────────────────────────
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(STATIC_CACHE).then(cache => {
-      return Promise.allSettled(
-        STATIC_ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn(`[SW] Failed to cache ${url}:`, err))
-        )
-      );
-    })
-  );
-});
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-512.png',
+  '/assets/icons/favicon.ico',
+
+  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap'
+];
 
 // ── Activate ─────────────────────────────────────────────────────────────────
 self.addEventListener('activate', (e) => {
