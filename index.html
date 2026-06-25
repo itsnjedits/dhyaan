@@ -22,100 +22,60 @@
   <link rel="manifest" href="./manifest.json" />
 
   <!-- Favicons -->
-  <link
-    rel="icon"
-    type="image/svg+xml"
-    href="./assets/icons/favicon.svg"
-  />
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="./assets/icons/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
 
-  <link
-    rel="icon"
-    type="image/x-icon"
-    href="./assets/icons/favicon.ico"
-    sizes="any"
-  />
-
-  <link
-    rel="apple-touch-icon"
-    href="./assets/icons/icon-192.png"
-  />
-
-  <!-- Mobile App -->
+  <!-- Mobile Web App -->
   <meta name="mobile-web-app-capable" content="yes" />
-
-  <!-- Apple -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta
-    name="apple-mobile-web-app-status-bar-style"
-    content="black-translucent"
-  />
-  <meta
-    name="apple-mobile-web-app-title"
-    content="Dhyaan"
-  />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Dhyaan" />
 
   <!-- Open Graph -->
-  <meta
-    property="og:title"
-    content="Dhyaan — A Living Meditation Experience"
-  />
+  <meta property="og:title" content="Dhyaan — A Living Meditation Experience" />
+  <meta property="og:description" content="Immersive ambient soundscapes for deep focus, healing, and stillness." />
+  <meta property="og:type" content="website" />
 
-  <meta
-    property="og:description"
-    content="Immersive ambient soundscapes for deep focus, healing, and stillness."
-  />
-
-  <meta
-    property="og:type"
-    content="website"
-  />
-
-  <!-- Fonts -->
+  <!-- Fonts: preconnect + parallel load (no @import to avoid blocking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com"
-  />
-
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
-    crossorigin
-  />
-
-  <link
-    rel="preload"
-    as="style"
+    rel="preload" as="style"
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap"
   />
-
   <link
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap"
   />
 
-  <!-- Styles -->
+  <!-- Styles: themes first (defines CSS vars), then main (consumes them) -->
   <link rel="stylesheet" href="./css/themes.css" />
   <link rel="stylesheet" href="./css/main.css" />
 </head>
+
 <body data-theme="zen-dark">
 
-<!-- Ambient canvas -->
+<!-- ── Ambient visualizer ──────────────────────────────────────────────────── -->
 <canvas id="particle-canvas" aria-hidden="true"></canvas>
 
-<!-- Mobile sidebar backdrop -->
-<div id="mobile-sidebar-backdrop" aria-hidden="true"></div>
+<!-- ── Mobile sidebar backdrop ─────────────────────────────────────────────── -->
+<div id="sidebar-backdrop" aria-hidden="true"></div>
 
-<!-- ── Expand mode overlay ───────────────────────────────────────────────── -->
-<!-- tabindex="-1" makes the element programmatically focusable so
-     overlay.focus() works for keyboard/AT navigation when immersive
-     mode opens. -->
-<div id="expand-overlay" role="dialog" aria-label="Immersive player"
-     aria-modal="true" aria-hidden="true" tabindex="-1">
-  <img id="expand-image" src="" alt="Album art" draggable="false" />
-  <div class="expand-gradient"></div>
+<!-- ── Expand / Immersive overlay ──────────────────────────────────────────── -->
+<div
+  id="expand-overlay"
+  role="dialog"
+  aria-label="Immersive player"
+  aria-modal="true"
+  aria-hidden="true"
+  tabindex="-1"
+>
+  <img id="expand-image" src="" alt="" draggable="false" aria-hidden="true" />
+  <div class="expand-gradient" aria-hidden="true"></div>
 
   <button id="collapse-btn" aria-label="Exit immersive mode" title="Exit (Esc)">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
   </button>
 
   <div class="expand-ui">
@@ -126,8 +86,17 @@
 
     <div class="expand-progress-wrap">
       <span class="expand-time" id="expand-current">0:00</span>
-      <div class="expand-progress-bar" id="expand-progress-bar" role="slider"
-           aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div
+        class="expand-progress-bar"
+        id="expand-progress-bar"
+        role="slider"
+        aria-label="Playback position"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+        tabindex="0"
+      >
+        <div id="expand-buffered" class="progress-buffer"></div>
         <div id="expand-filled"></div>
         <div id="expand-thumb" class="progress-thumb"></div>
       </div>
@@ -135,129 +104,134 @@
     </div>
 
     <div class="expand-controls">
-      <button class="expand-ctrl-btn" id="expand-prev" aria-label="Previous">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      <button class="expand-ctrl-btn" id="expand-shuffle" aria-label="Shuffle">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
-      <button id="expand-play-btn" aria-label="Play / Pause">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <button class="expand-ctrl-btn" id="expand-prev" aria-label="Previous">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+      <button id="expand-play-btn" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <button class="expand-ctrl-btn" id="expand-next" aria-label="Next">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+      <button class="expand-ctrl-btn" id="expand-repeat" aria-label="Repeat">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
       </button>
     </div>
 
-    <div class="expand-swipe-hint">tap to show controls</div>
+    <div class="expand-swipe-hint" aria-hidden="true">tap to show controls</div>
 
-    <!-- Recommendations panel injected by dhyaan.js -->
+    <!-- Recommendation panel inserted by script.js -->
   </div>
-</div>
+</div><!-- /#expand-overlay -->
 
-<!-- ── Main app ──────────────────────────────────────────────────────────── -->
+
+<!-- ── Main application ─────────────────────────────────────────────────────── -->
 <div id="app">
 
-  <!-- Header -->
+  <!-- Header ──────────────────────────────────────────────────────────────── -->
   <header id="header">
-    <div class="logo" role="button" tabindex="0" aria-label="About Dhyaan">
-      <span class="logo-glyph">☸</span>
+    <button
+      class="logo"
+      aria-label="About Dhyaan"
+      type="button"
+    >
+      <span class="logo-glyph" aria-hidden="true">☸</span>
       <span>Dhyaan</span>
-    </div>
+    </button>
 
     <div class="header-controls">
       <!-- Search -->
-      <div class="search-wrap">
+      <div class="search-wrap" role="search">
         <span class="search-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </span>
-        <input id="search-input" type="search" placeholder="Search tracks, moods…"
-               autocomplete="off" spellcheck="false" aria-label="Search tracks and moods"
-               inputmode="search" enterkeyhint="search" />
-        <button id="search-clear" aria-label="Clear search" title="Clear">✕</button>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Search tracks, moods…"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search tracks and moods"
+          inputmode="search"
+          enterkeyhint="search"
+        />
+        <button id="search-clear" aria-label="Clear search" title="Clear" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
       </div>
 
-      <!-- Theme switcher (desktop) -->
-      <div class="theme-switcher" aria-label="Theme selector" role="group">
-        <div class="theme-dot" data-theme-btn="zen-dark"        title="Zen Dark"        role="button" tabindex="0" aria-label="Zen Dark theme"></div>
-        <div class="theme-dot" data-theme-btn="night-blue"      title="Night Blue"       role="button" tabindex="0" aria-label="Night Blue theme"></div>
-        <div class="theme-dot" data-theme-btn="cosmic-purple"   title="Cosmic Purple"    role="button" tabindex="0" aria-label="Cosmic Purple theme"></div>
-        <div class="theme-dot" data-theme-btn="forest-calm"     title="Forest Calm"      role="button" tabindex="0" aria-label="Forest Calm theme"></div>
-        <div class="theme-dot" data-theme-btn="spiritual-green" title="Spiritual Green"  role="button" tabindex="0" aria-label="Spiritual Green theme"></div>
-        <div class="theme-dot" data-theme-btn="sunset-gold"     title="Sunset Gold"      role="button" tabindex="0" aria-label="Sunset Gold theme"></div>
-        <div class="theme-dot" data-theme-btn="rose-pink"       title="Rose Pink"        role="button" tabindex="0" aria-label="Rose Pink theme"></div>
-        <div class="theme-dot" data-theme-btn="moonlight"       title="Moonlight Silver" role="button" tabindex="0" aria-label="Moonlight theme"></div>
+      <!-- Theme switcher (desktop only via CSS) -->
+      <div class="theme-switcher desktop-only" aria-label="Choose atmosphere" role="group">
+        <div class="theme-dot" data-theme-btn="zen-dark"        title="Zen Dark"        role="button" tabindex="0" aria-label="Zen Dark"></div>
+        <div class="theme-dot" data-theme-btn="night-blue"      title="Night Blue"       role="button" tabindex="0" aria-label="Night Blue"></div>
+        <div class="theme-dot" data-theme-btn="cosmic-purple"   title="Cosmic Purple"    role="button" tabindex="0" aria-label="Cosmic Purple"></div>
+        <div class="theme-dot" data-theme-btn="forest-calm"     title="Forest Calm"      role="button" tabindex="0" aria-label="Forest Calm"></div>
+        <div class="theme-dot" data-theme-btn="spiritual-green" title="Spiritual Green"  role="button" tabindex="0" aria-label="Spiritual Green"></div>
+        <div class="theme-dot" data-theme-btn="sunset-gold"     title="Sunset Gold"      role="button" tabindex="0" aria-label="Sunset Gold"></div>
+        <div class="theme-dot" data-theme-btn="rose-pink"       title="Rose Pink"        role="button" tabindex="0" aria-label="Rose Pink"></div>
+        <div class="theme-dot" data-theme-btn="moonlight"       title="Moonlight Silver" role="button" tabindex="0" aria-label="Moonlight"></div>
       </div>
 
       <!-- Mobile menu button -->
-      <button id="mobile-menu-btn" aria-label="Open playlists and themes" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>
+      <button
+        id="mobile-menu-btn"
+        aria-label="Open playlists and settings"
+        aria-expanded="false"
+        aria-controls="sidebar"
+        type="button"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm15-1v6l5-3z"/></svg>
       </button>
     </div>
-  </header>
+  </header><!-- /#header -->
 
-  <!-- Sidebar -->
-  <aside id="sidebar" tabindex="-1" aria-label="Playlists and settings">
-    <button id="sidebar-close-btn" aria-label="Close panel" class="sidebar-close-btn-hidden">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-    </button>
 
-    <div id="sidebar-header-mobile" class="sidebar-mobile-header-hidden">Sanctuary</div>
+  <!-- Sidebar ─────────────────────────────────────────────────────────────── -->
+  <aside id="sidebar" aria-label="Playlists and settings">
+
+    <!-- Mobile-only top bar -->
+    <div class="sidebar-top">
+      <span class="sidebar-brand">Sanctuary</span>
+      <button
+        id="sidebar-close-btn"
+        aria-label="Close panel"
+        type="button"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
 
     <!-- Mobile-only theme panel -->
-    <div id="mobile-theme-panel" class="mobile-theme-panel-hidden">
-      <div class="mobile-theme-label">Atmosphere</div>
-      <div class="mobile-theme-grid">
-        <div class="mobile-theme-item" data-theme-mobile="zen-dark"
-             role="button" tabindex="0" aria-label="Switch to Zen Dark theme">
-          <div class="mobile-theme-swatch" style="background:#3ddc84"></div>
-          <span class="mobile-theme-name">Zen Dark</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="night-blue"
-             role="button" tabindex="0" aria-label="Switch to Night Blue theme">
-          <div class="mobile-theme-swatch" style="background:#5b8dee"></div>
-          <span class="mobile-theme-name">Night Blue</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="cosmic-purple"
-             role="button" tabindex="0" aria-label="Switch to Cosmic Purple theme">
-          <div class="mobile-theme-swatch" style="background:#a78bfa"></div>
-          <span class="mobile-theme-name">Cosmic</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="forest-calm"
-             role="button" tabindex="0" aria-label="Switch to Forest Calm theme">
-          <div class="mobile-theme-swatch" style="background:#86efac"></div>
-          <span class="mobile-theme-name">Forest</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="spiritual-green"
-             role="button" tabindex="0" aria-label="Switch to Spiritual Green theme">
-          <div class="mobile-theme-swatch" style="background:#6ee7b7"></div>
-          <span class="mobile-theme-name">Spiritual</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="sunset-gold"
-             role="button" tabindex="0" aria-label="Switch to Sunset Gold theme">
-          <div class="mobile-theme-swatch" style="background:#f59e0b"></div>
-          <span class="mobile-theme-name">Sunset</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="rose-pink"
-             role="button" tabindex="0" aria-label="Switch to Rose Pink theme">
-          <div class="mobile-theme-swatch" style="background:#f472b6"></div>
-          <span class="mobile-theme-name">Rose</span>
-        </div>
-        <div class="mobile-theme-item" data-theme-mobile="moonlight"
-             role="button" tabindex="0" aria-label="Switch to Moonlight theme">
-          <div class="mobile-theme-swatch" style="background:#cbd5e1"></div>
-          <span class="mobile-theme-name">Moonlight</span>
-        </div>
+    <div class="sidebar-themes">
+      <div class="sidebar-section-label">Atmosphere</div>
+      <div class="theme-swatches-grid">
+        <button class="theme-swatch-item" data-theme-swatch="zen-dark"        aria-label="Zen Dark">        <div class="theme-swatch-dot" style="background:#3ddc84"></div><span>Zen</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="night-blue"      aria-label="Night Blue">      <div class="theme-swatch-dot" style="background:#5b8dee"></div><span>Night</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="cosmic-purple"   aria-label="Cosmic Purple">   <div class="theme-swatch-dot" style="background:#a78bfa"></div><span>Cosmic</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="forest-calm"     aria-label="Forest Calm">     <div class="theme-swatch-dot" style="background:#86efac"></div><span>Forest</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="spiritual-green" aria-label="Spiritual Green"> <div class="theme-swatch-dot" style="background:#6ee7b7"></div><span>Spirit</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="sunset-gold"     aria-label="Sunset Gold">     <div class="theme-swatch-dot" style="background:#f59e0b"></div><span>Sunset</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="rose-pink"       aria-label="Rose Pink">       <div class="theme-swatch-dot" style="background:#f472b6"></div><span>Rose</span></button>
+        <button class="theme-swatch-item" data-theme-swatch="moonlight"       aria-label="Moonlight">       <div class="theme-swatch-dot" style="background:#cbd5e1"></div><span>Moon</span></button>
       </div>
     </div>
 
+    <!-- Playlists -->
     <div class="sidebar-section">
       <div class="sidebar-label">
         <span>Playlists</span>
-        <button id="new-playlist-btn" aria-label="New playlist">+ New</button>
+        <button id="new-playlist-btn" aria-label="Create new playlist" type="button">+ New</button>
       </div>
-      <div id="playlists-container"></div>
+      <div id="playlists-container" role="list" aria-label="Your playlists"></div>
     </div>
-  </aside>
 
-  <!-- Main content -->
+  </aside><!-- /#sidebar -->
+
+
+  <!-- Main content ──────────────────────────────────────────────────────────── -->
   <main id="main">
     <div id="mood-pills" role="group" aria-label="Filter by mood"></div>
     <div id="track-list" role="list" aria-label="Meditation tracks">
@@ -265,84 +239,102 @@
     </div>
   </main>
 
-  <!-- Player bar -->
-  <footer id="player" aria-label="Music player">
-    <div class="player-top-row">
-      <div class="np-info">
-        <div class="np-thumb">
-          <img id="np-image" src="" alt="Now playing" draggable="false" loading="lazy" />
-        </div>
-        <div class="np-text">
-          <div id="np-title">Select a track</div>
-          <div id="np-moods">―</div>
-        </div>
+
+  <!-- Player bar ────────────────────────────────────────────────────────────── -->
+  <footer id="player" aria-label="Now playing">
+
+    <!-- Now-playing info + mobile expand btn -->
+    <div class="player-info">
+      <div class="np-thumb" aria-hidden="true">
+        <img id="np-image" src="" alt="" draggable="false" />
       </div>
-      <button class="player-expand-mobile mobile-only" id="expand-btn-mobile"
-              aria-label="Immersive mode" title="Immersive mode">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <div class="np-text">
+        <div id="np-title" aria-label="Now playing">Select a track</div>
+        <div id="np-moods" aria-hidden="true">―</div>
+      </div>
+      <button
+        id="expand-btn-mobile"
+        class="icon-btn mobile-only"
+        aria-label="Immersive mode"
+        title="Immersive mode"
+        type="button"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
       </button>
     </div>
 
+    <!-- Controls + progress -->
     <div class="player-controls">
       <div class="ctrl-btns">
-        <button class="ctrl-btn" id="shuffle-btn" aria-label="Shuffle" title="Shuffle">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        <button class="ctrl-btn" id="shuffle-btn" aria-label="Shuffle" title="Shuffle (S)" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         </button>
-        <button class="ctrl-btn seek-btn desktop-only" id="seek-bwd" aria-label="Seek back 10s" title="−10s">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
-          <span>10</span>
+        <button class="ctrl-btn desktop-only" id="seek-bwd" aria-label="Seek back 10 seconds" title="−10s" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          <span aria-hidden="true">10</span>
         </button>
-        <button class="ctrl-btn" id="prev-btn" aria-label="Previous track">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        <button class="ctrl-btn" id="prev-btn" aria-label="Previous track" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
-        <button id="play-pause-btn" aria-label="Play / Pause">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <button id="play-pause-btn" aria-label="Play" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
         </button>
-        <button class="ctrl-btn" id="next-btn" aria-label="Next track">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        <button class="ctrl-btn" id="next-btn" aria-label="Next track" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
-        <button class="ctrl-btn seek-btn desktop-only" id="seek-fwd" aria-label="Seek forward 10s" title="+10s">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
-          <span>10</span>
+        <button class="ctrl-btn desktop-only" id="seek-fwd" aria-label="Seek forward 10 seconds" title="+10s" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+          <span aria-hidden="true">10</span>
         </button>
-        <button class="ctrl-btn" id="repeat-btn" aria-label="Repeat" title="Repeat">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-        </button>
-        <button class="ctrl-btn" id="random-btn" aria-label="Random meditation" title="Random track">
-          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.5"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
+        <button class="ctrl-btn" id="repeat-btn" aria-label="Repeat: off" title="Repeat (R)" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
         </button>
       </div>
 
       <div class="progress-wrap">
         <span class="time-label" id="current-time">0:00</span>
-        <div id="progress-bar" class="progress-bar-track" role="slider"
-             aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
-             tabindex="0">
-          <div id="progress-filled" class="progress-bar-fill"></div>
-          <div id="progress-thumb"  class="progress-thumb"></div>
+        <div
+          id="progress-bar"
+          role="slider"
+          aria-label="Playback position"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          tabindex="0"
+        >
+          <div id="progress-buffered" class="progress-buffer"></div>
+          <div id="progress-filled"></div>
+          <div id="progress-thumb" class="progress-thumb"></div>
         </div>
         <span class="time-label" id="duration">0:00</span>
       </div>
     </div>
 
+    <!-- Volume + expand (desktop only) -->
     <div class="player-right desktop-only">
       <div class="volume-wrap">
-        <span class="vol-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        </span>
-        <input id="volume-slider" type="range" min="0" max="100" value="75"
-               aria-label="Volume" autocomplete="off" />
+        <button id="mute-btn" class="icon-btn" aria-label="Mute" title="Mute (M)" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+        <input
+          id="volume-slider"
+          type="range"
+          min="0"
+          max="100"
+          value="75"
+          aria-label="Volume"
+          autocomplete="off"
+        />
       </div>
-      <button id="expand-btn" aria-label="Immersive mode" title="Immersive mode (E)">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <button id="expand-btn" class="icon-btn" aria-label="Immersive mode" title="Immersive mode (E)" type="button">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
       </button>
     </div>
-  </footer>
 
-</div><!-- #app -->
+  </footer><!-- /#player -->
 
-<!-- Single master script — all modules merged, no separate files needed -->
+</div><!-- /#app -->
+
 <script type="module" src="./script.js"></script>
-
 </body>
 </html>

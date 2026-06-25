@@ -1,40 +1,47 @@
 {
   "name": "Dhyaan — A Living Meditation Experience",
   "short_name": "Dhyaan",
-
   "description": "Immersive ambient soundscapes for deep focus, healing, and stillness.",
 
   "start_url": "./",
-
   "scope": "./",
 
   "display": "standalone",
-
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
 
   "theme_color": "#0a0f0d",
   "background_color": "#0a0f0d",
 
   "lang": "en",
+  "dir": "ltr",
 
-  "categories": [
-    "music",
-    "health",
-    "lifestyle"
-  ],
+  "categories": ["music", "health", "lifestyle"],
 
   "icons": [
     {
       "src": "./assets/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "./assets/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
 
@@ -44,5 +51,7 @@
       "url": "./",
       "description": "Open the meditation player"
     }
-  ]
+  ],
+
+  "prefer_related_applications": false
 }

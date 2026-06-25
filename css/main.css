@@ -1,20 +1,21 @@
-/* main.css — Dhyaan Meditation App — Mobile-Optimized Edition v2 */
-/* Google Fonts are loaded via <link rel="preload"> + <link rel="stylesheet"> in
-   index.html <head>. The @import that was here is removed: a CSS @import blocks
-   the parser until the font sheet downloads, whereas the <link> in <head> runs
-   in parallel with other resource fetches. Keeping both caused a duplicate
-   blocking HTTP request on every page load. */
-@import './themes.css';
+/* ============================================================
+   Dhyaan — main.css  v2.0
+   Themes (CSS custom properties) are in css/themes.css,
+   loaded as a separate <link> tag — no @import needed here.
+   ============================================================ */
 
-/* ── Reset & Base ─────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Reset & base ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Prevent text size inflation on orientation change */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -28,11 +29,10 @@ body {
   overflow-x: hidden;
   position: relative;
   transition: background 0.7s ease, color 0.5s ease;
-  /* Prevent elastic scroll / bounce on iOS when overlay is open */
   overscroll-behavior: none;
 }
 
-/* ── Ambient orbs ─────────────────────────────────────────────────────────── */
+/* Ambient background orbs */
 body::before {
   content: '';
   position: fixed;
@@ -43,7 +43,7 @@ body::before {
   transition: background 1s ease;
 }
 
-/* ── Canvas ───────────────────────────────────────────────────────────────── */
+/* ── Particle canvas ───────────────────────────────────────── */
 #particle-canvas {
   position: fixed;
   inset: 0;
@@ -55,7 +55,7 @@ body::before {
   transition: opacity 0.8s ease;
 }
 
-/* ── App layout ───────────────────────────────────────────────────────────── */
+/* ── App grid ──────────────────────────────────────────────── */
 #app {
   position: relative;
   z-index: 2;
@@ -69,37 +69,43 @@ body::before {
   min-height: 100dvh;
 }
 
-/* ── Utility classes ──────────────────────────────────────────────────────── */
-.mobile-only { display: none !important; }
+/* ── Utility: responsive visibility ────────────────────────── */
 .desktop-only { display: flex; }
+.mobile-only  { display: none !important; }
 
-/* Sidebar mobile state helpers — controlled by JS classList */
-.sidebar-close-btn-hidden { display: none !important; }
-.sidebar-mobile-header-hidden { display: none !important; }
-.mobile-theme-panel-hidden { display: none !important; }
-.mobile-only-hidden { display: none !important; }
+/* ── Focus styles (WCAG-compliant, theme-aware) ─────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 2px;
+}
 
-/* ── Header ───────────────────────────────────────────────────────────────── */
+/* ── Header ────────────────────────────────────────────────── */
 #header {
   grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: clamp(10px, 2vw, 16px) clamp(16px, 3vw, 28px);
+  padding-top:   calc(clamp(10px, 2vw, 16px)  + env(safe-area-inset-top, 0px));
+  padding-left:  calc(clamp(16px, 3vw, 28px)  + env(safe-area-inset-left, 0px));
+  padding-right: calc(clamp(16px, 3vw, 28px)  + env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--border);
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
   gap: 12px;
-  /* iOS notch */
-  padding-top: calc(clamp(10px, 2vw, 16px) + env(safe-area-inset-top, 0px));
-  padding-left: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-left, 0px));
-  padding-right: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-right, 0px));
 }
 
+/* Logo */
 .logo {
   font-family: 'Cormorant Garamond', serif;
   font-size: clamp(1.3rem, 2.5vw, 2rem);
@@ -111,12 +117,15 @@ body::before {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
   transition: text-shadow 0.3s ease;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-.logo:hover { text-shadow: 0 0 30px var(--accent-glow-strong); }
+.logo:hover { text-shadow: 0 0 36px var(--accent-glow-strong); }
 
 .logo-glyph {
   font-size: clamp(1.1rem, 2vw, 1.6rem);
@@ -126,9 +135,10 @@ body::before {
 
 @keyframes breathe {
   0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.1); }
+  50%       { opacity: 1;    transform: scale(1.1); }
 }
 
+/* Header controls */
 .header-controls {
   display: flex;
   align-items: center;
@@ -138,43 +148,11 @@ body::before {
   min-width: 0;
 }
 
-/* Theme switcher — desktop */
-.theme-switcher {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.theme-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.2s, transform 0.22s, box-shadow 0.22s;
-  flex-shrink: 0;
-  touch-action: manipulation;
-}
-.theme-dot:hover, .theme-dot.active {
-  border-color: var(--text-primary);
-  transform: scale(1.35);
-  box-shadow: 0 0 6px var(--accent-glow-strong);
-}
-.theme-dot[data-theme-btn="zen-dark"]        { background: #3ddc84; }
-.theme-dot[data-theme-btn="night-blue"]      { background: #5b8dee; }
-.theme-dot[data-theme-btn="cosmic-purple"]   { background: #a78bfa; }
-.theme-dot[data-theme-btn="forest-calm"]     { background: #86efac; }
-.theme-dot[data-theme-btn="spiritual-green"] { background: #6ee7b7; }
-.theme-dot[data-theme-btn="sunset-gold"]     { background: #f59e0b; }
-.theme-dot[data-theme-btn="rose-pink"]       { background: #f472b6; }
-.theme-dot[data-theme-btn="moonlight"]       { background: #cbd5e1; }
-
-/* Search bar */
+/* Search */
 .search-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 100px;
@@ -188,7 +166,11 @@ body::before {
   border-color: var(--accent-1);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
-.search-icon { color: var(--text-muted); width: 16px; height: 16px; flex-shrink: 0; }
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+}
 .search-icon svg { width: 16px; height: 16px; display: block; }
 
 #search-input {
@@ -197,12 +179,10 @@ body::before {
   outline: none;
   color: var(--text-primary);
   font-family: 'DM Mono', monospace;
-  font-size: clamp(0.7rem, 1.5vw, 0.8rem);
+  font-size: max(16px, 0.8rem); /* Prevent iOS zoom */
   width: 100%;
   letter-spacing: 0.03em;
   min-width: 0;
-  /* iOS fix: prevent auto-zoom on focus */
-  font-size: max(16px, 0.8rem);
 }
 #search-input::placeholder { color: var(--text-muted); }
 
@@ -211,19 +191,52 @@ body::before {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0;
+  padding: 2px;
   font-size: 0.9rem;
-  line-height: 1;
-  transition: color 0.2s;
-  flex-shrink: 0;
-  min-width: 24px;
-  min-height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
   touch-action: manipulation;
 }
-#search-clear:hover { color: var(--accent-1); }
+#search-clear svg { width: 16px; height: 16px; display: block; }
+#search-clear:hover { color: var(--accent-1); background: var(--accent-glow); }
+
+/* Theme dots (desktop) */
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.theme-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.22s, box-shadow 0.22s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.theme-dot:hover,
+.theme-dot.active {
+  border-color: var(--text-primary);
+  transform: scale(1.35);
+  box-shadow: 0 0 6px var(--accent-glow-strong);
+}
+.theme-dot[data-theme-btn="zen-dark"]        { background: #3ddc84; }
+.theme-dot[data-theme-btn="night-blue"]      { background: #5b8dee; }
+.theme-dot[data-theme-btn="cosmic-purple"]   { background: #a78bfa; }
+.theme-dot[data-theme-btn="forest-calm"]     { background: #86efac; }
+.theme-dot[data-theme-btn="spiritual-green"] { background: #6ee7b7; }
+.theme-dot[data-theme-btn="sunset-gold"]     { background: #f59e0b; }
+.theme-dot[data-theme-btn="rose-pink"]       { background: #f472b6; }
+.theme-dot[data-theme-btn="moonlight"]       { background: #cbd5e1; }
 
 /* Mobile menu button */
 #mobile-menu-btn {
@@ -236,7 +249,7 @@ body::before {
   border-radius: 10px;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s;
+  transition: color 0.18s, border-color 0.18s, background 0.18s;
   flex-shrink: 0;
   min-width: 44px;
   min-height: 44px;
@@ -250,22 +263,71 @@ body::before {
   background: var(--accent-glow);
 }
 
-/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+
+/* ── Sidebar backdrop ──────────────────────────────────────── */
+/*
+   FIX ISSUE 1 — Backdrop blur:
+   Root cause: backdrop had no backdrop-filter and no initial blur(0px) state,
+   so there was nothing to transition from/to.
+   Fix: add blur(0px) as initial state, blur(6px)+saturate(0.8) when open,
+   with a smooth transition across all three properties.
+   Using 6px (not heavy) to stay performant on low-end phones.
+   Saturate reduced to subtly de-emphasize the content, matching premium
+   iOS drawer behaviour — the background fades AND softens visually.
+*/
+#sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px) saturate(1);
+  -webkit-backdrop-filter: blur(0px) saturate(1);
+  z-index: 340;
+  transition:
+    background 0.32s ease,
+    backdrop-filter 0.35s ease,
+    -webkit-backdrop-filter 0.35s ease;
+  pointer-events: none;
+}
+#sidebar-backdrop.open {
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(6px) saturate(0.75);
+  -webkit-backdrop-filter: blur(6px) saturate(0.75);
+  pointer-events: all;
+}
+
+
+/* ── Sidebar ───────────────────────────────────────────────── */
+/*
+   FIX ISSUE 2 (CSS side) — Sidebar interaction:
+   Added explicit pointer-events: auto to ensure sidebar and all children
+   reliably capture touch/pointer events, preventing them from reaching
+   the backdrop behind. backdrop-filter elements can sometimes create
+   transparent hit-test areas on WebKit — this closes that gap.
+*/
 #sidebar {
   grid-area: sidebar;
   background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-right: 1px solid var(--border);
-  padding: 24px 0;
+  padding: 24px 0 40px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  pointer-events: auto; /* Explicit: sidebar always captures its own events */
 }
 
-.sidebar-section { padding: 0 18px 24px; }
+/* Mobile-only sidebar elements: hidden on desktop */
+.sidebar-top    { display: none; }
+.sidebar-themes { display: none; }
 
+.sidebar-section {
+  padding: 0 18px 20px;
+}
+
+.sidebar-section-label,
 .sidebar-label {
   font-family: 'DM Mono', monospace;
   font-size: 0.62rem;
@@ -273,6 +335,9 @@ body::before {
   text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 12px;
+}
+
+.sidebar-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -287,9 +352,10 @@ body::before {
   border-radius: 6px;
   font-family: 'DM Mono', monospace;
   font-size: 0.6rem;
-  transition: all 0.18s;
+  transition: color 0.18s, border-color 0.18s, box-shadow 0.18s;
   min-height: 36px;
   touch-action: manipulation;
+  letter-spacing: 0.04em;
 }
 #new-playlist-btn:hover {
   color: var(--accent-1);
@@ -302,19 +368,20 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 10px;
+  padding: 10px 10px;
   border-radius: 10px;
   cursor: pointer;
   transition: background 0.18s;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   min-height: 48px;
+  border-left: 2px solid transparent;
 }
 .pl-item:hover { background: var(--bg-hover); }
 .pl-item.active {
   background: var(--bg-hover);
-  border-left: 2px solid var(--accent-1);
+  border-left-color: var(--accent-1);
   padding-left: 8px;
 }
 .pl-item.active .pl-name {
@@ -330,22 +397,20 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .pl-count {
   font-family: 'DM Mono', monospace;
   font-size: 0.58rem;
   color: var(--text-muted);
   flex-shrink: 0;
 }
-
 .pl-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   opacity: 0;
   transition: opacity 0.2s;
 }
 .pl-item:hover .pl-actions { opacity: 1; }
-/* Always visible on touch devices */
+/* Always show on touch */
 @media (pointer: coarse) { .pl-actions { opacity: 1; } }
 
 .pl-actions button {
@@ -353,10 +418,10 @@ body::before {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   padding: 6px 8px;
-  border-radius: 4px;
-  transition: all 0.15s;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
   touch-action: manipulation;
   min-width: 36px;
   min-height: 36px;
@@ -366,6 +431,8 @@ body::before {
 }
 .pl-actions button:hover { color: var(--accent-1); background: var(--accent-glow); }
 
+.pl-rename-btn { font-size: 1rem; }
+
 .empty-pl {
   font-size: 0.82rem;
   color: var(--text-muted);
@@ -373,39 +440,41 @@ body::before {
   padding: 8px 0;
 }
 
-/* Mobile Sidebar backdrop */
-#mobile-sidebar-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0);
-  z-index: 200;
-  transition: background 0.35s ease;
-  pointer-events: none;
-}
-#mobile-sidebar-backdrop.open {
-  background: rgba(0,0,0,0.55);
-  pointer-events: all;
-}
 
-/* ── Main content ─────────────────────────────────────────────────────────── */
+/* ── Main content ──────────────────────────────────────────── */
+/*
+   FIX ISSUE 5 (CSS side) — Layout shift / apparent zoom:
+   scrollbar-gutter: stable prevents the available width from changing
+   when the scrollbar appears/disappears. Without this, 1vw changes
+   whenever a scrollbar shows up, causing all clamp()-based sizes to
+   recalculate — which looks like a "zoom" between meditations.
+   overscroll-behavior: contain prevents iOS rubber-band scroll chaining.
+*/
 #main {
   grid-area: main;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: clamp(16px, 3vw, 28px);
+  padding: clamp(18px, 3vw, 28px) clamp(16px, 3vw, 28px);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
-  /* Smooth momentum scroll on iOS */
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 /* Mood pills */
+/*
+   FIX ISSUE 4/8 — Mood pill shadow clipping:
+   Added padding-top/bottom: 4px to create space for active pill
+   box-shadow glows — previously they were clipped flush at the edge.
+   Also tightened margin-bottom using clamp for better mobile spacing.
+*/
 #mood-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  margin-bottom: clamp(18px, 3vw, 28px);
+  padding: 4px 0;
+  margin-bottom: clamp(14px, 3vw, 28px);
 }
 
 .mood-pill {
@@ -428,42 +497,42 @@ body::before {
   -webkit-tap-highlight-color: transparent;
   min-height: 40px;
   flex-shrink: 0;
+  border: none; /* override & use outline approach */
+  background: var(--bg-card);
+  outline: 1px solid var(--border);
 }
 .mood-pill:hover {
-  border-color: var(--accent-1);
+  outline-color: var(--accent-1);
   color: var(--accent-1);
   box-shadow: 0 0 12px var(--accent-glow);
 }
 .mood-pill.active {
   background: var(--accent-glow);
-  border-color: var(--accent-1);
+  outline: 1px solid var(--accent-1);
   color: var(--accent-1);
   box-shadow: 0 0 18px var(--accent-glow-strong);
-  animation: pillGlow 3s ease-in-out infinite;
-}
-@keyframes pillGlow {
-  0%, 100% { box-shadow: 0 0 18px var(--accent-glow-strong); }
-  50% { box-shadow: 0 0 28px var(--accent-glow-strong), 0 0 8px var(--accent-glow); }
 }
 .mood-icon { font-size: 0.85rem; opacity: 0.8; }
 
-/* Track grid */
+
+/* ── Track grid ────────────────────────────────────────────── */
 #track-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: clamp(12px, 2vw, 16px);
 }
 
-/* Track card */
+/* ── Track card ────────────────────────────────────────────── */
 .track-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease;
   position: relative;
-  animation: fadeIn 0.4s ease backwards;
+  transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease;
+  animation: fadeUp 0.4s ease backwards;
+  animation-delay: var(--card-delay, 0s);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -472,7 +541,7 @@ body::before {
   box-shadow: var(--shadow-glow), var(--shadow);
   transform: translateY(-3px);
 }
-/* Disable hover transform on touch devices (causes flicker) */
+/* No lift on touch devices to avoid tap-hold flicker */
 @media (pointer: coarse) {
   .track-card:hover { transform: none; }
 }
@@ -493,46 +562,66 @@ body::before {
 .track-card.highlight { animation: cardPulse 2s ease; }
 @keyframes cardPulse {
   0%, 100% { box-shadow: var(--shadow-glow); }
-  50% { box-shadow: 0 0 50px var(--accent-glow-strong), 0 0 0 2px var(--accent-1); }
+  50%       { box-shadow: 0 0 50px var(--accent-glow-strong), 0 0 0 2px var(--accent-1); }
 }
 
+/* Thumbnail */
+/*
+   FIX ISSUE 6 — Image standardization:
+   aspect-ratio: 16/9 enforces a fixed container regardless of source
+   image dimensions (portrait/landscape/square). object-fit: cover fills
+   it without distorting. object-position: center is now explicit
+   (was browser default, but making it explicit prevents any browser
+   from defaulting differently and causing subtle crop shifts between tracks).
+   The combination means: no matter what image dimension is in the JSON,
+   the card layout stays identical — only the cropped visible portion changes.
+*/
 .track-thumb {
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--bg-secondary);
+  contain: layout paint; /* Prevent image loads from causing outer layout shifts */
 }
 
+/* FIX: No scale transform. Opacity-only transition prevents the "image jumps" bug.
+   Images were transitioning from scale(1.06)→scale(1) which caused a visible
+   enlargement on page restore when cached images loaded instantly. */
 .track-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   opacity: 0;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  transform: scale(1.06);
+  transition: opacity 0.45s ease;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
   pointer-events: none;
-  draggable: false;
+  display: block;
 }
-.track-img.loaded { opacity: 1; transform: scale(1); }
+.track-img.loaded { opacity: 1; }
 
+/* Play overlay */
 .track-play-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.42);
+  background: rgba(0, 0, 0, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.25s;
-  pointer-events: all;
+  pointer-events: none;
 }
 .track-card:hover .track-play-overlay,
 .track-card.active .track-play-overlay { opacity: 1; }
+.track-play-overlay { pointer-events: all; }
 @media (pointer: coarse) {
-  .track-card.active .track-play-overlay { opacity: 1; }
-  .track-card:active .track-play-overlay { opacity: 1; }
+  .track-card.active .track-play-overlay  { opacity: 1; }
+  .track-card:active .track-play-overlay  { opacity: 1; }
+  /* Non-active cards: only show overlay on active press, not hover */
+  .track-card:not(.active):hover .track-play-overlay { opacity: 0; }
 }
 
 .track-play-btn {
@@ -540,7 +629,7 @@ body::before {
   height: clamp(44px, 6vw, 52px);
   border-radius: 50%;
   border: 2px solid var(--accent-1);
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   color: var(--accent-1);
   cursor: pointer;
   display: flex;
@@ -557,12 +646,16 @@ body::before {
   box-shadow: 0 0 24px var(--accent-glow-strong);
   transform: scale(1.12);
 }
-.track-play-btn svg { width: 22px; height: 22px; }
+.track-play-btn svg { width: 22px; height: 22px; display: block; }
 
-.track-info { padding: clamp(10px, 2vw, 14px) clamp(10px, 2vw, 14px) 8px; }
-
+/* Card info */
+.track-info {
+  padding: clamp(10px, 2vw, 14px) clamp(10px, 2vw, 14px) 6px;
+  position: relative;
+  z-index: 1;
+}
 .track-title {
-  font-size: clamp(0.9rem, 2vw, 1.02rem);
+  font-size: clamp(0.88rem, 2vw, 1rem);
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: 0.01em;
@@ -573,7 +666,6 @@ body::before {
   user-select: none;
   -webkit-user-select: none;
 }
-
 .track-moods {
   display: flex;
   flex-wrap: wrap;
@@ -581,7 +673,6 @@ body::before {
   user-select: none;
   -webkit-user-select: none;
 }
-
 .mood-tag {
   font-family: 'DM Mono', monospace;
   font-size: 0.6rem;
@@ -593,11 +684,14 @@ body::before {
   border: 1px solid var(--border);
 }
 
+/* Card actions */
 .track-actions {
   display: flex;
   align-items: center;
-  padding: 8px clamp(10px, 2vw, 14px) clamp(10px, 2vw, 14px);
-  gap: 4px;
+  padding: 4px clamp(8px, 2vw, 12px) clamp(10px, 2vw, 14px);
+  gap: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .icon-btn {
@@ -610,7 +704,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s;
+  transition: color 0.18s, background 0.18s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   min-width: 40px;
@@ -619,12 +713,11 @@ body::before {
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 .icon-btn:hover { color: var(--accent-1); background: var(--accent-glow); }
 .icon-btn.active { color: var(--accent-1); }
-.fav-btn.active { color: #f87171; }
-.fav-btn.active:hover { background: rgba(248, 113, 113, 0.15); }
-.icon-btn.remove-pl-btn:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.12);
-}
+
+.fav-btn.active       { color: #f87171; }
+.fav-btn.active:hover { color: #f87171; background: rgba(248, 113, 113, 0.12); }
+
+.remove-pl-btn:hover  { color: #f87171 !important; background: rgba(248, 113, 113, 0.12) !important; }
 
 /* Empty state */
 .empty-state {
@@ -634,9 +727,49 @@ body::before {
   color: var(--text-muted);
   font-style: italic;
   font-size: clamp(0.95rem, 2vw, 1.1rem);
+  line-height: 1.8;
+}
+.empty-state .retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 10px 24px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-1);
+  border-radius: 100px;
+  color: var(--accent-1);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-style: normal;
+}
+.empty-state .retry-btn:hover {
+  background: var(--accent-glow-strong);
+  box-shadow: 0 0 16px var(--accent-glow);
 }
 
-/* ── Player bar ───────────────────────────────────────────────────────────── */
+/* Offline indicator */
+.offline-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #f87171;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+
+/* ── Player bar ────────────────────────────────────────────── */
 #player {
   grid-area: player;
   background: var(--bg-glass);
@@ -644,19 +777,19 @@ body::before {
   -webkit-backdrop-filter: blur(24px);
   border-top: 1px solid var(--border);
   padding: clamp(10px, 2vw, 14px) clamp(16px, 3vw, 28px);
+  padding-bottom: calc(clamp(10px, 2vw, 14px) + env(safe-area-inset-bottom, 0px));
+  padding-left:   calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-left, 0px));
+  padding-right:  calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
-  gap: clamp(12px, 2vw, 20px);
+  gap: clamp(12px, 2vw, 24px);
   position: sticky;
   bottom: 0;
-  z-index: 100;
-  /* Safe area for home indicator */
-  padding-bottom: calc(clamp(10px, 2vw, 14px) + env(safe-area-inset-bottom, 0px));
-  padding-left: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-left, 0px));
-  padding-right: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-right, 0px));
+  z-index: 200;
 }
 
-.player-top-row {
+/* Now-playing info section */
+.player-info {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -664,42 +797,39 @@ body::before {
   min-width: 0;
 }
 
-.np-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
 .np-thumb {
-  width: clamp(44px, 7vw, 52px);
-  height: clamp(44px, 7vw, 52px);
+  width: clamp(44px, 6vw, 52px);
+  height: clamp(44px, 6vw, 52px);
   border-radius: 10px;
   overflow: hidden;
   background: var(--bg-secondary);
   flex-shrink: 0;
   border: 1px solid var(--border);
-  transition: box-shadow 0.6s ease;
+  transition: box-shadow 0.5s ease;
 }
-.np-thumb:has(#np-image.loaded) { box-shadow: 0 0 16px var(--accent-glow); }
 
+/* FIX: Same opacity-only approach for np-image */
 #np-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   opacity: 0;
-  transition: opacity 0.4s;
+  transition: opacity 0.4s ease;
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
+  display: block;
 }
-#np-image.loaded { opacity: 1; }
+#np-image.loaded {
+  opacity: 1;
+}
+.np-thumb:has(#np-image.loaded) { box-shadow: 0 0 16px var(--accent-glow); }
 
 .np-text { min-width: 0; flex: 1; }
 
 #np-title {
-  font-size: clamp(0.88rem, 1.8vw, 1rem);
+  font-size: clamp(0.86rem, 1.8vw, 1rem);
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -710,10 +840,9 @@ body::before {
   user-select: none;
   -webkit-user-select: none;
 }
-
 #np-moods {
   font-family: 'DM Mono', monospace;
-  font-size: clamp(0.58rem, 1.2vw, 0.64rem);
+  font-size: clamp(0.56rem, 1.2vw, 0.62rem);
   color: var(--text-muted);
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -723,6 +852,7 @@ body::before {
   -webkit-user-select: none;
 }
 
+/* Controls + progress */
 .player-controls {
   flex: 1;
   display: flex;
@@ -736,7 +866,7 @@ body::before {
 .ctrl-btns {
   display: flex;
   align-items: center;
-  gap: clamp(4px, 1vw, 8px);
+  gap: clamp(2px, 1vw, 6px);
 }
 
 .ctrl-btn {
@@ -749,11 +879,15 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s;
+  gap: 3px;
+  transition: color 0.18s, background 0.18s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   min-width: 44px;
   min-height: 44px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
 }
 .ctrl-btn svg { width: 20px; height: 20px; display: block; }
 .ctrl-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
@@ -770,7 +904,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 24px var(--accent-glow-strong);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -780,20 +914,11 @@ body::before {
   transform: scale(1.08);
   box-shadow: 0 6px 32px var(--accent-glow-strong);
 }
-#play-pause-btn:active { transform: scale(0.97); }
+#play-pause-btn:active { transform: scale(0.96); }
 #play-pause-btn svg { width: 24px; height: 24px; display: block; }
 
-.ctrl-btn.seek-btn {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.65rem;
-  padding: 6px 8px;
-  border-radius: 6px;
-  gap: 2px;
-  color: var(--text-muted);
-  min-width: unset;
-}
 
-/* ── Progress bar ──────────────────────────────────────────────────────────── */
+/* ── Progress bar (player + expand share styles) ───────────── */
 .progress-wrap {
   width: 100%;
   display: flex;
@@ -803,56 +928,65 @@ body::before {
 
 .time-label {
   font-family: 'DM Mono', monospace;
-  font-size: clamp(0.62rem, 1.2vw, 0.68rem);
+  font-size: clamp(0.60rem, 1.2vw, 0.66rem);
   color: var(--text-muted);
   white-space: nowrap;
   min-width: 34px;
   text-align: center;
   flex-shrink: 0;
+  letter-spacing: 0.04em;
 }
 
-/* Shared progress bar base */
-.progress-bar-track,
-#progress-bar {
+/* Shared progress bar track */
+#progress-bar,
+.expand-progress-bar {
   flex: 1;
   height: 4px;
   background: var(--bg-hover);
   border-radius: 100px;
   cursor: pointer;
   position: relative;
-  /* Expand touch target without affecting visual */
+  /* Expanded touch target */
   padding: 14px 0;
   margin: -14px 0;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   outline: none;
-  transition: height 0.2s;
+  transition: height 0.18s ease;
 }
 #progress-bar:hover,
 #progress-bar:focus-visible { height: 6px; }
 
-.progress-bar-fill,
+/* Buffer indicator */
+.progress-buffer {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: inherit;
+  transition: width 0.5s ease;
+  pointer-events: none;
+}
+
+/* Played fill */
 #progress-filled {
+  position: absolute;
+  top: 0; left: 0;
   height: 100%;
   width: 0%;
   background: var(--accent-1);
   border-radius: 100px;
-  position: relative;
-  transition: width 0.2s linear;
+  transition: width 0.18s linear;
   box-shadow: 0 0 10px var(--accent-glow-strong);
   pointer-events: none;
 }
+/* Suppress transition during seek drag for instant feedback */
+#progress-bar.dragging #progress-filled { transition: none; }
 
-/* FIX: suppress fill transition while dragging so the bar tracks finger instantly */
-#progress-bar.dragging #progress-filled,
-.expand-progress-bar.dragging #expand-filled {
-  transition: none;
-}
-
-/* Progress thumb */
-.progress-thumb,
-#progress-thumb {
+/* Thumb dot */
+.progress-thumb {
   position: absolute;
   top: 50%;
   left: 0%;
@@ -863,30 +997,34 @@ body::before {
   background: var(--accent-1);
   box-shadow: 0 0 8px var(--accent-glow-strong);
   opacity: 0;
-  transition: opacity 0.18s, transform 0.1s;
+  transition: opacity 0.18s;
   pointer-events: none;
   z-index: 1;
 }
 #progress-bar:hover .progress-thumb,
-#progress-bar:hover #progress-thumb,
-#progress-bar.dragging .progress-thumb,
-#progress-bar.dragging #progress-thumb { opacity: 1; }
+#progress-bar.dragging .progress-thumb { opacity: 1; }
 
-/* ── Player right (volume + expand) ────────────────────────────────────────── */
+
+/* ── Player right: volume + expand (desktop) ───────────────── */
 .player-right {
   align-items: center;
   gap: 10px;
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .volume-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.vol-icon { color: var(--text-muted); width: 18px; height: 18px; flex-shrink: 0; }
-.vol-icon svg { width: 18px; height: 18px; display: block; }
+#mute-btn {
+  color: var(--text-muted);
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
+}
+#mute-btn.muted { color: var(--text-muted); opacity: 0.5; }
 
 #volume-slider {
   -webkit-appearance: none;
@@ -900,8 +1038,8 @@ body::before {
     to right,
     var(--accent-1) 0%,
     var(--accent-1) var(--vol-fill, 75%),
-    var(--bg-hover) var(--vol-fill, 75%),
-    var(--bg-hover) 100%
+    var(--bg-hover)  var(--vol-fill, 75%),
+    var(--bg-hover)  100%
   );
   transition: background 0.1s linear;
 }
@@ -927,19 +1065,13 @@ body::before {
 }
 
 #expand-btn {
-  background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
-  cursor: pointer;
   padding: 10px;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  touch-action: manipulation;
   min-width: 44px;
   min-height: 44px;
+  transition: all 0.2s;
 }
 #expand-btn svg { width: 20px; height: 20px; display: block; }
 #expand-btn:hover {
@@ -949,34 +1081,21 @@ body::before {
 }
 
 /* Mobile expand button */
-.player-expand-mobile {
-  flex-shrink: 0;
-  background: none;
+#expand-btn-mobile svg { width: 18px; height: 18px; display: block; }
+#expand-btn-mobile {
   border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 10px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  min-width: 44px;
-  min-height: 44px;
-}
-.player-expand-mobile svg { width: 18px; height: 18px; display: block; }
-.player-expand-mobile:hover {
-  border-color: var(--accent-1);
-  color: var(--accent-1);
+  padding: 8px;
+  border-radius: 8px;
+  min-width: 40px;
+  min-height: 40px;
 }
 
 /* Spinner */
 .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Expand Mode — Immersive ──────────────────────────────────────────────── */
+
+/* ── Expand / Immersive overlay ────────────────────────────── */
 #expand-overlay {
   position: fixed;
   inset: 0;
@@ -984,8 +1103,7 @@ body::before {
   background: #000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  /* cursor: none moved to @media (pointer: fine) to avoid affecting touch UX */
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
   overscroll-behavior: contain;
 }
 body.expand-mode #expand-overlay {
@@ -993,48 +1111,54 @@ body.expand-mode #expand-overlay {
   pointer-events: all;
 }
 
-/* FIX: scope cursor:none to real pointer devices only */
+/* Canvas hidden behind overlay in expand mode */
+body.expand-mode #particle-canvas {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+/* Cursor: none on precise pointer in expand mode */
 @media (pointer: fine) {
-  #expand-overlay { cursor: none; }
+  #expand-overlay                            { cursor: none; }
   body.expand-mode.controls-visible #expand-overlay { cursor: default; }
 }
 
-/* FIX BUG-005: z-index 499 keeps canvas inside the overlay stacking context */
-body.expand-mode #particle-canvas { opacity: 0.85; z-index: 499; }
-
+/* FIX: opacity-only transition for expand image — no scale transform
+   that could cause the "image suddenly enlarges" bug */
 #expand-image {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   opacity: 0;
-  transition: opacity 1s ease, transform 20s ease;
-  transform: scale(1.1);
-  filter: brightness(0.42) saturate(0.75);
+  transition: opacity 0.9s ease;
+  filter: brightness(0.38) saturate(0.7);
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
 }
-#expand-image.loaded { opacity: 1; transform: scale(1.03); }
+#expand-image.loaded { opacity: 1; }
 
 .expand-gradient {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 20%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.4) 100%);
+    radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 20%, rgba(0,0,0,0.5) 100%),
+    linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.4) 100%);
   pointer-events: none;
   z-index: 1;
 }
 
+/* Collapse button */
 #collapse-btn {
   position: absolute;
-  top: calc(clamp(16px, 3vw, 24px) + env(safe-area-inset-top, 0px));
+  top:   calc(clamp(16px, 3vw, 24px) + env(safe-area-inset-top, 0px));
   right: calc(clamp(16px, 3vw, 24px) + env(safe-area-inset-right, 0px));
-  background: rgba(0,0,0,0.45);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.7);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   padding: 12px;
   border-radius: 12px;
@@ -1042,75 +1166,77 @@ body.expand-mode #particle-canvas { opacity: 0.85; z-index: 499; }
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(12px);
-  transition:
-    opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s,
-    border-color 0.2s;
   z-index: 10;
-  opacity: 0;
-  transform: translateY(-12px);
-  pointer-events: none;
-  touch-action: manipulation;
   min-width: 52px;
   min-height: 52px;
-}
-#collapse-btn svg { width: 22px; height: 22px; display: block; }
-#collapse-btn:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
-
-.expand-ui {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding:
-    clamp(24px, 4vw, 40px)
-    clamp(20px, 4vw, 40px)
-    calc(clamp(36px, 5vw, 50px) + env(safe-area-inset-bottom, 0px))
-    clamp(20px, 4vw, 40px);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(14px, 3vw, 24px);
+  touch-action: manipulation;
+  /* Controlled visibility */
   opacity: 0;
-  transform: translateY(28px);
+  transform: translateY(-10px);
   pointer-events: none;
   transition:
-    opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s,
+    border-color 0.2s;
 }
-
-body.expand-mode.controls-visible .expand-ui {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: all;
-}
+#collapse-btn svg { width: 22px; height: 22px; display: block; }
+#collapse-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.45); }
 body.expand-mode.controls-visible #collapse-btn {
   opacity: 1;
   transform: translateY(0);
   pointer-events: all;
 }
 
-.expand-track-info { margin-bottom: 4px; width: 100%; }
+/* Expand UI panel */
+.expand-ui {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 2;
+  padding:
+    clamp(24px, 4vw, 40px)
+    clamp(20px, 5vw, 56px)
+    calc(clamp(36px, 5vw, 52px) + env(safe-area-inset-bottom, 0px))
+    clamp(20px, 5vw, 56px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 3vw, 22px);
+  /* Controlled visibility */
+  opacity: 0;
+  transform: translateY(24px);
+  pointer-events: none;
+  transition:
+    opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.expand-mode.controls-visible .expand-ui {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+/* Track info */
+.expand-track-info { width: 100%; margin-bottom: 2px; }
 
 #expand-title {
+  font-family: 'Cormorant Garamond', serif;
   font-size: clamp(1.4rem, 5vw, 2.8rem);
   font-weight: 300;
   font-style: italic;
-  color: rgba(255,255,255,0.92);
-  text-shadow: 0 2px 40px rgba(0,0,0,0.9);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.9);
   letter-spacing: 0.04em;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   user-select: none;
   -webkit-user-select: none;
+  line-height: 1.2;
 }
-
 #expand-moods {
   font-family: 'DM Mono', monospace;
-  font-size: clamp(0.6rem, 1.5vw, 0.7rem);
-  color: rgba(255,255,255,0.4);
+  font-size: clamp(0.58rem, 1.5vw, 0.68rem);
+  color: rgba(255, 255, 255, 0.38);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   user-select: none;
@@ -1129,7 +1255,7 @@ body.expand-mode.controls-visible #collapse-btn {
 .expand-progress-bar {
   flex: 1;
   height: 3px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 100px;
   cursor: pointer;
   position: relative;
@@ -1139,23 +1265,30 @@ body.expand-mode.controls-visible #collapse-btn {
   user-select: none;
   -webkit-user-select: none;
   outline: none;
-  transition: height 0.2s;
+  transition: height 0.18s ease;
 }
 .expand-progress-bar:hover { height: 5px; }
 
 #expand-filled {
+  position: absolute;
+  top: 0; left: 0;
   height: 100%;
   width: 0%;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 100px;
-  transition: width 0.2s linear;
-  box-shadow: 0 0 10px rgba(255,255,255,0.4);
+  transition: width 0.18s linear;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   pointer-events: none;
+}
+.expand-progress-bar.dragging #expand-filled { transition: none; }
+
+#expand-buffered {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 #expand-thumb {
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
   opacity: 0;
   transition: opacity 0.18s;
 }
@@ -1164,58 +1297,61 @@ body.expand-mode.controls-visible #collapse-btn {
 
 .expand-time {
   font-family: 'DM Mono', monospace;
-  font-size: clamp(0.58rem, 1.2vw, 0.64rem);
-  color: rgba(255,255,255,0.38);
+  font-size: clamp(0.56rem, 1.2vw, 0.62rem);
+  color: rgba(255, 255, 255, 0.36);
   white-space: nowrap;
   flex-shrink: 0;
+  letter-spacing: 0.06em;
 }
 
+/* Expand controls */
 .expand-controls {
   display: flex;
   align-items: center;
-  gap: clamp(16px, 3vw, 24px);
+  gap: clamp(8px, 3vw, 22px);
 }
 
 .expand-ctrl-btn {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  padding: 14px;
+  padding: 12px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: color 0.2s, background 0.2s, transform 0.18s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  min-width: 56px;
-  min-height: 56px;
+  min-width: 52px;
+  min-height: 52px;
 }
-.expand-ctrl-btn svg { width: clamp(24px, 4vw, 28px); height: clamp(24px, 4vw, 28px); display: block; }
-.expand-ctrl-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.expand-ctrl-btn svg { width: clamp(22px, 4vw, 28px); height: clamp(22px, 4vw, 28px); display: block; }
+.expand-ctrl-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.expand-ctrl-btn.active { color: rgba(255, 255, 255, 0.9); }
 
 #expand-play-btn {
   width: clamp(62px, 10vw, 72px);
   height: clamp(62px, 10vw, 72px);
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  border: 1.5px solid rgba(255,255,255,0.35);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   color: #fff;
   backdrop-filter: blur(16px);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.22s;
+  transition: background 0.22s, border-color 0.22s, transform 0.18s, box-shadow 0.22s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 #expand-play-btn:hover {
-  background: rgba(255,255,255,0.22);
-  border-color: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.65);
   transform: scale(1.06);
-  box-shadow: 0 0 30px rgba(255,255,255,0.2);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.18);
 }
 #expand-play-btn:active { transform: scale(0.96); }
 #expand-play-btn svg { width: 30px; height: 30px; display: block; }
@@ -1224,17 +1360,81 @@ body.expand-mode.controls-visible #collapse-btn {
   font-family: 'DM Mono', monospace;
   font-size: 0.54rem;
   letter-spacing: 0.18em;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255, 255, 255, 0.18);
   text-transform: uppercase;
-  display: none;
-  animation: fadePulse 3s ease-in-out infinite;
+  animation: gentlePulse 3s ease-in-out infinite;
 }
-@keyframes fadePulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+@keyframes gentlePulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.9; }
 }
 
-/* ── Modal system ─────────────────────────────────────────────────────────── */
+
+/* ── Expand recommendations ────────────────────────────────── */
+.expand-reco-panel {
+  width: 100%;
+  max-width: 560px;
+  margin-top: 4px;
+}
+.expand-reco-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.26);
+  margin-bottom: 10px;
+  text-align: center;
+}
+.expand-reco-list {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.expand-reco-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  width: 82px;
+  transition: background 0.22s, border-color 0.22s, transform 0.22s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.expand-reco-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+}
+.expand-reco-thumb {
+  width: 82px;
+  height: 52px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+.expand-reco-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 0 6px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+
+/* ── Modal system ──────────────────────────────────────────── */
 #dhyaan-modal-root {
   position: fixed;
   inset: 0;
@@ -1244,18 +1444,18 @@ body.expand-mode.controls-visible #collapse-btn {
 #dhyaan-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0);
+  background: rgba(0, 0, 0, 0);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  transition: background 0.35s ease, backdrop-filter 0.35s ease;
+  transition: background 0.32s ease, backdrop-filter 0.32s ease;
   pointer-events: none;
 }
 #dhyaan-modal-backdrop.open {
-  background: rgba(0,0,0,0.65);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   pointer-events: all;
@@ -1264,18 +1464,18 @@ body.expand-mode.controls-visible #collapse-btn {
   background: var(--bg-glass);
   border: 1px solid var(--border-hover);
   border-radius: 20px;
-  padding: clamp(24px, 4vw, 32px);
+  padding: clamp(22px, 4vw, 32px);
   min-width: 280px;
   max-width: 440px;
   width: 100%;
   box-shadow: var(--shadow), 0 0 40px var(--accent-glow);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  transform: scale(0.92) translateY(12px);
+  transform: scale(0.92) translateY(14px);
   opacity: 0;
   transition:
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.3s ease;
+    transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.28s ease;
   max-height: 90dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1285,7 +1485,8 @@ body.expand-mode.controls-visible #collapse-btn {
   opacity: 1;
 }
 #dhyaan-modal-title {
-  font-size: clamp(1.15rem, 3vw, 1.4rem);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
   font-weight: 300;
   font-style: italic;
   color: var(--accent-1);
@@ -1303,7 +1504,7 @@ body.expand-mode.controls-visible #collapse-btn {
   padding: 14px 16px;
   color: var(--text-primary);
   font-family: 'Cormorant Garamond', serif;
-  font-size: max(16px, 1rem); /* Prevent iOS zoom */
+  font-size: max(16px, 1rem);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   -webkit-appearance: none;
@@ -1333,11 +1534,12 @@ body.expand-mode.controls-visible #collapse-btn {
   border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
   text-align: left;
   touch-action: manipulation;
   min-height: 56px;
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
 }
 .modal-pick-item:hover {
   border-color: var(--accent-1);
@@ -1356,16 +1558,10 @@ body.expand-mode.controls-visible #collapse-btn {
   letter-spacing: 0.08em;
 }
 .modal-confirm-msg {
+  font-family: 'Cormorant Garamond', serif;
   font-size: 0.95rem;
   color: var(--text-secondary);
   line-height: 1.7;
-}
-.modal-empty-note {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 16px 0;
 }
 #dhyaan-modal-footer {
   display: flex;
@@ -1373,7 +1569,9 @@ body.expand-mode.controls-visible #collapse-btn {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.modal-btn-ghost, .modal-btn-accent, .modal-btn-danger {
+.modal-btn-ghost,
+.modal-btn-accent,
+.modal-btn-danger {
   padding: 12px 22px;
   border-radius: 100px;
   font-family: 'DM Mono', monospace;
@@ -1403,16 +1601,63 @@ body.expand-mode.controls-visible #collapse-btn {
   transform: translateY(-1px);
 }
 .modal-btn-danger {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.12);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.28);
 }
-.modal-btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+.modal-btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
 
-/* ── Toast ────────────────────────────────────────────────────────────────── */
+/* About modal specific */
+.about-wrap { position: relative; }
+.about-tagline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  font-style: italic;
+  color: var(--accent-1);
+  text-align: center;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+.about-divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin: 14px 0;
+  letter-spacing: 0.3em;
+  opacity: 0.45;
+  animation: breathe 4s ease-in-out infinite;
+}
+.about-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+  color: var(--text-secondary);
+  line-height: 1.9;
+  margin-bottom: 14px;
+}
+.about-text em { color: var(--accent-1); font-style: italic; }
+.about-footer-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-align: center;
+  margin-top: 6px;
+  opacity: 0.55;
+}
+kbd {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+}
+
+
+/* ── Toast ─────────────────────────────────────────────────── */
 .dhyaan-toast {
   position: fixed;
-  bottom: clamp(90px, 15vw, 110px);
+  bottom: calc(clamp(90px, 15vw, 110px) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%) translateY(16px);
   background: var(--bg-glass);
@@ -1421,16 +1666,16 @@ body.expand-mode.controls-visible #collapse-btn {
   padding: 11px 22px;
   border-radius: 100px;
   font-family: 'DM Mono', monospace;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   letter-spacing: 0.07em;
   z-index: 9999;
   opacity: 0;
-  transition: all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: var(--shadow), 0 0 24px var(--accent-glow);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   white-space: nowrap;
-  max-width: calc(100vw - 40px);
+  max-width: calc(100vw - 48px);
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
@@ -1441,34 +1686,8 @@ body.expand-mode.controls-visible #collapse-btn {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── Scrollbars ───────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
-/* ── Keyboard hint ────────────────────────────────────────────────────────── */
-.keys-hint {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 18px 0;
-}
-.key-item { display: inline-flex; align-items: center; gap: 4px; }
-kbd {
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.58rem;
-}
-
-/* ── Playlist view header ─────────────────────────────────────────────────── */
+/* ── Playlist view header ───────────────────────────────────── */
 .playlist-view-header {
   display: flex;
   align-items: center;
@@ -1493,7 +1712,7 @@ kbd {
   cursor: pointer;
   padding: 10px 12px;
   border-radius: 10px;
-  transition: color 0.18s, border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  transition: all 0.18s;
   touch-action: manipulation;
   min-width: 48px;
   min-height: 48px;
@@ -1506,12 +1725,7 @@ kbd {
   box-shadow: 0 0 10px var(--accent-glow);
 }
 .pl-back-btn svg { display: block; }
-.pl-header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
+.pl-header-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .pl-header-name {
   font-family: 'Cormorant Garamond', serif;
   font-size: clamp(1.05rem, 3vw, 1.25rem);
@@ -1525,255 +1739,74 @@ kbd {
 }
 .pl-header-count {
   font-family: 'DM Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   letter-spacing: 0.12em;
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
-/* ── Content protection ───────────────────────────────────────────────────── */
+
+/* ── Content protection ────────────────────────────────────── */
 .track-img, #np-image, #expand-image {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  pointer-events: none;
 }
-.track-play-overlay { pointer-events: all; }
-.track-title, .track-moods, .mood-tag, #np-title, #np-moods, #expand-title, #expand-moods {
+.track-title, .track-moods, #np-title, #np-moods, #expand-title, #expand-moods {
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* ── Atmosphere enhancements ──────────────────────────────────────────────── */
-#main::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.3) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
-  transition: opacity 0.6s;
-}
 
-/* ── About modal ──────────────────────────────────────────────────────────── */
-.about-modal-wrap {
-  position: relative;
-  overflow: hidden;
-  min-height: 280px;
-}
-.about-particle-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0.8;
-}
-.about-modal-title {
-  font-size: clamp(1.5rem, 4vw, 1.8rem);
-  font-weight: 300;
-  letter-spacing: 0.12em;
-  color: var(--accent-1);
-  text-shadow: 0 0 30px var(--accent-glow-strong);
-  font-style: italic;
-}
-.about-tagline {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(1rem, 3vw, 1.2rem);
-  font-style: italic;
-  color: var(--accent-1);
-  text-align: center;
-  letter-spacing: 0.08em;
-  margin-bottom: 16px;
-  position: relative;
-  z-index: 1;
-}
-.about-divider {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  margin: 16px 0;
-  letter-spacing: 0.3em;
-  opacity: 0.5;
-  animation: breathe 4s ease-in-out infinite;
-}
-.about-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(0.92rem, 2vw, 1rem);
-  color: var(--text-secondary);
-  line-height: 1.85;
-  margin-bottom: 14px;
-  position: relative;
-  z-index: 1;
-}
-.about-text em { color: var(--accent-1); font-style: italic; }
-.about-footer-text {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  color: var(--text-muted);
-  letter-spacing: 0.15em;
-  text-align: center;
-  margin-top: 8px;
-  opacity: 0.6;
-}
-
-/* ── Expand mode recommendations ─────────────────────────────────────────── */
-.expand-reco-panel {
-  width: 100%;
-  max-width: 560px;
-  margin-top: 8px;
-}
-.expand-reco-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.28);
-  margin-bottom: 10px;
-  text-align: center;
-}
-.expand-reco-list {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.expand-reco-item {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  width: 82px;
-  transition: all 0.22s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 8px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.expand-reco-item:hover {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.25);
-  transform: translateY(-2px);
-}
-.expand-reco-thumb {
-  width: 82px;
-  height: 52px;
-  background-size: cover;
-  background-position: center;
-  background-color: rgba(255,255,255,0.05);
-}
-.expand-reco-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.55);
-  text-align: center;
-  padding: 0 6px;
-  line-height: 1.3;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* ── Animations ───────────────────────────────────────────────────────────── */
-@keyframes fadeIn {
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.track-card:nth-child(1) { animation-delay: 0.02s; }
-.track-card:nth-child(2) { animation-delay: 0.05s; }
-.track-card:nth-child(3) { animation-delay: 0.08s; }
-.track-card:nth-child(4) { animation-delay: 0.11s; }
-.track-card:nth-child(5) { animation-delay: 0.14s; }
-.track-card:nth-child(6) { animation-delay: 0.17s; }
 
-/* ── Low power mode ───────────────────────────────────────────────────────── */
-body.low-power #particle-canvas { opacity: 0.35; }
-body.low-power .track-card { animation: none; }
-body.low-power * { transition-duration: 0.05s !important; }
 
-/* ── prefers-reduced-motion ───────────────────────────────────────────────── */
-/* CSS companion to the JS handling in visualizer.js.
-   The JS layer (visualizer.js) already reduces particle count to
-   CONFIG.PARTICLE_COUNT.low and caps the RAF loop at 20 fps.
-   This CSS layer additionally:
-     - Kills all decorative CSS keyframe animations
-     - Flattens hover transforms (primary vestibular-disorder trigger)
-     - Collapses transition durations to near-instant for all elements
-     - Dims the particle canvas further to minimise flicker perception
-   Together they produce an essentially static, non-animated UI that remains
-   fully functional while respecting the user's OS accessibility preference. */
+/* ── Scrollbars ────────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 5px; height: 5px; }
+::-webkit-scrollbar-track      { background: transparent; }
+::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--border-hover); }
+
+
+/* ── Low-power mode ────────────────────────────────────────── */
+body.low-power #particle-canvas { opacity: 0.3; }
+body.low-power .track-card      { animation: none; }
+body.low-power *                {
+  transition-duration: 0.05s !important;
+  animation-duration:  0.05s !important;
+}
+
+
+/* ── Reduced motion ────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  /* ── Freeze all decorative animations ────────────────────────────────── */
-  .logo-glyph                { animation: none !important; opacity: 0.8; }
-  .mood-pill.active          { animation: none !important; }
-  .track-card                { animation: none !important; }
-  .track-card.highlight      { animation: none !important; }
-  .expand-swipe-hint         { animation: none !important; opacity: 0.2; }
-  .about-divider             { animation: none !important; }
-  .playlist-view-header      { animation: none !important; }
-  .dhyaan-toast              { transition: opacity 0.05s !important; }
-
-  /* ── Flatten hover & active transforms ───────────────────────────────── */
-  /* These translateY / scale movements are the primary vestibular trigger.
-     We keep border-color and box-shadow changes (non-moving) for feedback. */
-  .track-card:hover            { transform: none !important; }
-  .track-play-btn:hover        { transform: none !important; }
-  .modal-btn-accent:hover      { transform: none !important; }
-  .expand-reco-item:hover      { transform: none !important; }
-  .theme-dot:hover,
-  .theme-dot.active            { transform: none !important; }
-  .mobile-theme-item:hover .mobile-theme-swatch,
-  .mobile-theme-item.active .mobile-theme-swatch { transform: none !important; }
-  #play-pause-btn:hover        { transform: none !important; }
-  #play-pause-btn:active       { transform: none !important; }
-  #expand-play-btn:hover       { transform: none !important; }
-  #expand-play-btn:active      { transform: none !important; }
-
-  /* ── Collapse all remaining transition durations ─────────────────────── */
-  /* Applied last so it overrides any longer durations declared above.
-     0.05s is perceptible enough to feel responsive but far too short to
-     cause vestibular discomfort (threshold is generally > 150–200 ms). */
   *, *::before, *::after {
-    animation-duration:        0.01ms !important;
-    animation-iteration-count: 1      !important;
-    transition-duration:       0.05s  !important;
-    scroll-behavior:           auto   !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
-
-  /* ── Dim canvas further ──────────────────────────────────────────────── */
-  /* The visualizer already uses very few particles at 20 fps under
-     reduced-motion. Reducing canvas opacity to near-zero removes any
-     remaining flicker for users who are photosensitive while keeping
-     the element available (allows the themed background gradient to show). */
-  #particle-canvas { opacity: 0.08 !important; }
+  .logo-glyph { animation: none; }
+  .about-divider { animation: none; }
+  .expand-swipe-hint { animation: none; }
+  #particle-canvas { display: none; }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVE
-   ══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Tablet (≤900px) ─────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  #app { grid-template-columns: 220px 1fr; }
-  .player-top-row { flex: 0 0 200px; }
-  .ctrl-btn.seek-btn { display: none; }
-}
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ════════════════════════════════════════════════════════════ */
 
-/* ── Mobile (≤768px) ─────────────────────────────────────────────────────── */
+/* ── Tablet / Mobile  ≤ 768px ──────────────────────────────── */
 @media (max-width: 768px) {
-  /* Utility overrides */
-  .mobile-only  { display: flex !important; }
-  .desktop-only { display: none !important; }
 
-  /* Grid: remove sidebar column */
+  /* FIX ISSUE 5 — Freeze base font at 15px on mobile so vw-based
+     clamp() doesn't change when the scrollbar appears/disappears.
+     This eliminates the "apparent zoom" between meditations. */
+  body { font-size: 15px; }
+
+  /* ── Grid: single-column, sidebar leaves the flow ───────── */
   #app {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -1782,242 +1815,191 @@ body.low-power * { transition-duration: 0.05s !important; }
       "player";
   }
 
-  /* ── BUG-006 FIX: Sidebar backdrop-filter + transform conflict ─────────────
-     On Android Chrome (Chromium <116) and some iOS Safari versions,
-     backdrop-filter does not composite correctly when the element also has an
-     active CSS transform, producing a black / opaque rectangle instead of
-     a blur. Fix: remove backdrop-filter from the sidebar on mobile and use a
-     fully opaque background instead. The #mobile-sidebar-backdrop provides
-     the dimming + subtle blur behind the sidebar.
-     will-change: transform pre-promotes the element to its own GPU compositing
-     layer so the slide animation is smooth and doesn't trigger a re-composite.
-     We clear will-change after open so the layer is released.
-  ── */
+  /* ── Sidebar: fixed slide-in overlay ─────────────────────── */
   #sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: min(300px, 85vw);
-    z-index: 210;
+    inset: 0 auto 0 0;
+    width: min(85vw, 300px);
+    z-index: 350;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    padding-left:  calc(4px + env(safe-area-inset-left, 0px));
+    /* Slide in from left */
     transform: translateX(-100%);
-    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-    padding-top: calc(64px + env(safe-area-inset-top, 0px));
-    border-right: 1px solid var(--border-hover);
-    box-shadow: 4px 0 40px rgba(0,0,0,0.5);
-    /* Remove backdrop-filter: it breaks rendering when combined with transform
-       on Android Chrome. Use an opaque background instead. */
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: var(--bg-secondary);
-    /* Pre-promote to own GPU compositing layer before animation begins */
-    will-change: transform;
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    /* Override grid area */
+    grid-area: unset;
+    /* FIX ISSUE 2 — ensure sidebar fully captures touch events */
+    pointer-events: auto;
+    will-change: transform; /* promote to own compositor layer */
   }
   #sidebar.open {
     transform: translateX(0);
-    /* Release compositing layer once animation is settled */
-    will-change: auto;
+    box-shadow: 10px 0 50px rgba(0, 0, 0, 0.65);
   }
 
-  /* Backdrop provides the dimming + blur behind the sidebar */
-  #mobile-sidebar-backdrop {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 205;
-    background: rgba(0,0,0,0);
-    pointer-events: none;
-    transition: background 0.35s ease;
-  }
-  #mobile-sidebar-backdrop.open {
-    background: rgba(0,0,0,0);
-    pointer-events: all;
-    /* Blur is safe here: backdrop element has no transform */
-    /* backdrop-filter: blur(4px); */
-    /* -webkit-backdrop-filter: blur(4px); */
-  }
+  /* Show sidebar backdrop */
+  #sidebar-backdrop { display: block; }
 
-  /* Show mobile elements */
-  #sidebar-close-btn,
-  #sidebar-close-btn.sidebar-close-btn-hidden {
-    display: flex !important;
-    position: absolute;
-    top: calc(14px + env(safe-area-inset-top, 0px));
-    right: 14px;
-    background: var(--bg-hover);
+  /* Show mobile-only sidebar elements */
+  .sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 18px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--accent-1);
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 16px var(--accent-glow-strong);
+  }
+  #sidebar-close-btn {
+    display: flex;
+    background: none;
     border: 1px solid var(--border);
-    color: var(--text-secondary);
+    color: var(--text-muted);
     cursor: pointer;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 8px;
+    border-radius: 8px;
     align-items: center;
     justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
     transition: all 0.18s;
     touch-action: manipulation;
-    z-index: 1;
-    min-width: 48px;
-    min-height: 48px;
+    -webkit-tap-highlight-color: transparent;
   }
   #sidebar-close-btn svg { width: 18px; height: 18px; display: block; }
   #sidebar-close-btn:hover { color: var(--accent-1); border-color: var(--accent-1); }
 
-  #sidebar-header-mobile,
-  #sidebar-header-mobile.sidebar-mobile-header-hidden {
-    display: block !important;
-    padding: 16px 18px 8px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.2rem;
-    font-weight: 300;
-    letter-spacing: 0.1em;
-    color: var(--accent-1);
-    font-style: italic;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
-  }
-
-  #mobile-theme-panel,
-  #mobile-theme-panel.mobile-theme-panel-hidden {
-    display: block !important;
+  /* Mobile theme panel */
+  .sidebar-themes {
+    display: block;
     padding: 0 18px 20px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
+    margin-bottom: 20px;
   }
-
-  .mobile-theme-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+  .sidebar-section-label {
     margin-bottom: 12px;
   }
-  .mobile-theme-grid {
+  .theme-swatches-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    gap: 8px;
   }
-  .mobile-theme-item {
+  .theme-swatch-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     cursor: pointer;
+    padding: 6px 4px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.04em;
+    transition: background 0.18s, border-color 0.18s;
     touch-action: manipulation;
-    padding: 4px;
-    border-radius: 8px;
-    transition: background 0.18s;
     -webkit-tap-highlight-color: transparent;
+    min-height: 60px;
+    justify-content: center;
   }
-  .mobile-theme-swatch {
-    width: 38px;
-    height: 38px;
+  .theme-swatch-item:hover { background: var(--bg-hover); }
+  .theme-swatch-item.active {
+    background: var(--accent-glow);
+    border-color: var(--accent-1);
+    color: var(--accent-1);
+  }
+  .theme-swatch-dot {
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: 2px solid transparent;
     transition: transform 0.2s, border-color 0.2s;
   }
-  .mobile-theme-item:hover .mobile-theme-swatch,
-  .mobile-theme-item.active .mobile-theme-swatch {
-    transform: scale(1.15);
-    border-color: var(--text-primary);
-    box-shadow: 0 0 8px var(--accent-glow-strong);
-  }
-  .mobile-theme-name {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.52rem;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    text-align: center;
-    line-height: 1.2;
-  }
+  .theme-swatch-item.active .theme-swatch-dot { border-color: currentColor; }
 
-  /* Show mobile menu button */
-  #mobile-menu-btn { display: flex; }
-  /* Hide desktop theme switcher */
-  .theme-switcher { display: none; }
+  /* Show mobile menu button, hide desktop theme dots */
+  #mobile-menu-btn    { display: flex; }
+  .theme-switcher     { display: none !important; }
 
-  /* Header adjustments */
-  #header { gap: 10px; }
+  /* Show mobile-specific player controls */
+  .mobile-only { display: flex !important; }
+  .desktop-only { display: none !important; }
+
+  /* Search: full width */
   .search-wrap { max-width: 100%; flex: 1; }
+  #header      { gap: 8px; }
 
-  /* Main */
+  /* Main: tighter padding */
   #main { padding: 14px max(14px, env(safe-area-inset-left, 0px)); }
 
-  /* ── Mood pills: horizontally scrollable ───────────────────────────────────
-     FIX: padding-left/right raised from 4px to 16px so the first and last
-     pills start inside the mask's opaque zone (transparent 0→black at 16px).
-     scroll-padding-left ensures scroll-into-view snaps to the same boundary.
-  ── */
+  /* FIX ISSUE 4/8 — Mood pills: padding-top so glow glows aren't clipped.
+     The -webkit-mask-image transition zone reduced to 8px so pills at
+     the edge aren't too faded, improving readability of active states. */
   #mood-pills {
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding-bottom: 6px;
+    padding: 4px max(4px, env(safe-area-inset-left, 0px)) 8px;
     margin-bottom: 18px;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
-    padding-left: 16px;
-    padding-right: 16px;
-    scroll-padding-left: 16px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+    mask-image:         linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
     gap: 6px;
   }
   #mood-pills::-webkit-scrollbar { display: none; }
 
-  /* Track grid: 2 col on tablet-mobile, 1 col on phones */
-  #track-list {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-  }
+  /* Track grid: 2 columns on tablet, 1 on phone */
+  #track-list { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 
-  /* Player bar: stacked layout */
+  /* ── Player: stacked layout ─────────────────────────────── */
   #player {
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     padding: 12px max(14px, env(safe-area-inset-left, 0px)) calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  .player-top-row {
+  .player-info {
     flex: none;
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
-  .np-info { flex: 1; min-width: 0; }
+  .np-text { flex: 1; min-width: 0; }
 
+  /* FIX ISSUE 3 — Player controls spacing:
+     Root cause: gap: 2px between control buttons was too tight for mobile
+     touch targets, and the 6px gap between button row and progress bar
+     made the section feel cramped.
+     Fix: 8px between ctrl buttons gives comfortable touch separation
+     without cramping on small phones. 10px between row and bar gives
+     the progress bar breathing room. margin on play-pause gives it
+     visual separation from flanking controls. */
   .player-controls {
-    order: unset;
     width: 100%;
     max-width: 100%;
-    gap: 6px;
+    gap: 10px;   /* was 6px */
+    order: 2;
   }
-  .ctrl-btns { gap: 2px; width: 100%; justify-content: center; }
-
-  /* Progress bar full width on mobile */
-  .progress-wrap { gap: 8px; }
-
-  /* Expand mode improvements for mobile */
-  #expand-play-btn { width: 68px; height: 68px; }
-  #expand-play-btn svg { width: 32px; height: 32px; }
-  .expand-ctrl-btn { min-width: 56px; min-height: 56px; }
-  .expand-swipe-hint { display: block; }
-  .expand-progress-wrap { max-width: 100%; }
-  .expand-reco-panel { max-width: 100%; }
-  .expand-reco-list {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+  .ctrl-btns {
+    gap: 6px;    /* was 2px */
+    width: 100%;
+    justify-content: center;
   }
-  .expand-reco-list::-webkit-scrollbar { display: none; }
-  .expand-reco-item { width: 76px; flex-shrink: 0; }
-  .expand-reco-thumb { width: 76px; height: 48px; }
+  #play-pause-btn {
+    margin: 0 6px; /* extra breathing room flanking the main action button */
+  }
 
-  /* Modal: bottom sheet */
+  /* Modal: bottom sheet on mobile */
   #dhyaan-modal-backdrop {
     align-items: flex-end;
     padding: 0;
@@ -2033,117 +2015,149 @@ body.low-power * { transition-duration: 0.05s !important; }
     transform: scale(1) translateY(0);
   }
 
-  /* Toast above player */
+  /* Toast: closer to player bar */
   .dhyaan-toast {
-    bottom: calc(clamp(90px, 15vw, 110px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(clamp(100px, 25vw, 130px) + env(safe-area-inset-bottom, 0px));
   }
 
-  /* .pl-actions visible on mobile */
+  /* pl-actions always visible on mobile */
   .pl-actions { opacity: 1; }
+
+  /* Expand mode: bigger touch targets */
+  #expand-play-btn    { width: 68px; height: 68px; }
+  #expand-play-btn svg{ width: 32px; height: 32px; }
+  .expand-ctrl-btn    { min-width: 52px; min-height: 52px; }
+
+  /* Show swipe hint on mobile */
+  .expand-swipe-hint { display: block; }
+
+  /* Reco panel: horizontal scroll */
+  .expand-reco-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .expand-reco-list::-webkit-scrollbar { display: none; }
+  .expand-reco-item { flex-shrink: 0; }
 }
 
-/* ── Expand mode: portrait mobile ────────────────────────────────────────── */
+/* ── Portrait mobile ≤ 768px ───────────────────────────────── */
 @media (max-width: 768px) and (orientation: portrait) {
   .expand-ui {
     gap: 10px;
-    padding: 20px 20px calc(30px + env(safe-area-inset-bottom, 0px));
+    padding: 20px 20px calc(32px + env(safe-area-inset-bottom, 0px));
   }
   #expand-title { font-size: clamp(1.2rem, 6vw, 1.8rem); }
-  .expand-controls { gap: 12px; }
 }
 
-/* ── Expand mode: landscape mobile ──────────────────────────────────────── */
+/* ── Landscape mobile ──────────────────────────────────────── */
+/*
+   FIX ISSUE 7 — Immersive landscape mode:
+   Previously, controls were hidden unless controls-visible class was applied
+   (auto-hide timer). In landscape the available height is limited so controls
+   must always be visible and immediately accessible.
+   Also: improved the two-panel split — image is 48% with a gradient that
+   bleeds across both panels (not a hard edge), keeping the immersive feel.
+   The right panel uses a dark-glass look rather than solid bg-primary.
+*/
 @media (orientation: landscape) and (max-height: 500px) {
   body.expand-mode #expand-overlay {
     display: flex;
     flex-direction: row;
+    overflow: hidden;
   }
   body.expand-mode #expand-image {
     position: relative;
-    width: 42%;
+    width: 48%;
     height: 100%;
     object-fit: cover;
+    object-position: center center;
     flex-shrink: 0;
+    filter: brightness(0.55) saturate(0.8); /* slightly brighter in landscape */
+    opacity: 1 !important;
   }
   body.expand-mode .expand-gradient {
+    /* Gradient bleeds across the split: fade right for seamless blend */
     background:
-      linear-gradient(to right, transparent 60%, rgba(0,0,0,0.9) 100%),
-      linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%);
+      linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%),
+      linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%);
+    z-index: 1;
   }
   body.expand-mode .expand-ui {
     position: relative;
     bottom: auto; left: auto; right: auto;
     flex: 1;
-    display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 16px 20px 16px 16px;
-    text-align: center;
-    background: var(--bg-primary);
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)) 20px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    gap: 8px;
+    gap: 10px;
+    /* FIX: Always visible in landscape — no auto-hide */
     opacity: 1 !important;
     transform: none !important;
     pointer-events: all !important;
   }
   body.expand-mode #collapse-btn {
-    top: calc(10px + env(safe-area-inset-top, 0px));
+    top:   calc(10px + env(safe-area-inset-top, 0px));
     right: calc(10px + env(safe-area-inset-right, 0px));
+    /* FIX: Always visible in landscape */
     opacity: 1 !important;
     transform: none !important;
     pointer-events: all !important;
   }
-  body.expand-mode #expand-title { font-size: clamp(1rem, 3.5vw, 1.4rem); margin-bottom: 4px; }
-  body.expand-mode #expand-moods { font-size: 0.55rem; }
-  body.expand-mode .expand-progress-wrap { max-width: 100%; }
-  body.expand-mode .expand-controls { gap: 10px; }
-  body.expand-mode #expand-play-btn { width: 52px; height: 52px; }
-  body.expand-mode #expand-play-btn svg { width: 24px; height: 24px; }
-  body.expand-mode .expand-ctrl-btn { min-width: 44px; min-height: 44px; padding: 10px; }
-  body.expand-mode .expand-ctrl-btn svg { width: 22px; height: 22px; }
-  body.expand-mode .expand-reco-panel { display: none; }
+  body.expand-mode #expand-title  { font-size: clamp(1rem, 3.5vw, 1.4rem); margin-bottom: 2px; }
+  body.expand-mode #expand-moods  { font-size: 0.56rem; }
+  body.expand-mode .expand-reco-panel { display: none; } /* hide recos in compact landscape */
   body.expand-mode .expand-swipe-hint { display: none; }
-  /* Consistent with base z-index fix (BUG-005) */
-  body.expand-mode #particle-canvas { z-index: 499; position: fixed; }
+  body.expand-mode #expand-play-btn   { width: 52px; height: 52px; }
+  body.expand-mode #expand-play-btn svg { width: 24px; height: 24px; }
+  body.expand-mode .expand-ctrl-btn   { min-width: 44px; min-height: 44px; padding: 8px; }
+  body.expand-mode .expand-ctrl-btn svg { width: 22px; height: 22px; }
+  body.expand-mode .expand-progress-wrap { max-width: none; width: 100%; }
+  body.expand-mode .expand-controls { gap: 8px; }
 }
 
-/* ── Small phones (≤480px) ───────────────────────────────────────────────── */
+/* ── Small phones ≤ 480px ──────────────────────────────────── */
 @media (max-width: 480px) {
   #track-list { grid-template-columns: 1fr; }
-  .ctrl-btn { padding: 8px; min-width: 42px; min-height: 42px; }
+
+  /* FIX ISSUE 3/4 — Tighter controls on small phones but still comfortable */
+  .ctrl-btn   { padding: 8px; min-width: 42px; min-height: 42px; }
   .ctrl-btn svg { width: 18px; height: 18px; }
-  #play-pause-btn { width: 50px; height: 50px; }
+  #play-pause-btn     { width: 52px; height: 52px; margin: 0 4px; }
   #play-pause-btn svg { width: 22px; height: 22px; }
-  .mood-pill { padding: 6px 11px; font-size: 0.85rem; }
-  .ctrl-btn.seek-btn { display: none; }
-  #expand-title { font-size: clamp(1.1rem, 7vw, 1.6rem); }
-  .expand-controls { gap: 10px; }
-  .np-thumb { width: 42px; height: 42px; }
-  #search-input { font-size: 16px; } /* Prevent iOS zoom */
+  .ctrl-btns  { gap: 4px; } /* slightly tighter on small phones */
+
+  .mood-pill  { padding: 6px 10px; font-size: 0.85rem; }
+  .np-thumb   { width: 40px; height: 40px; }
+  #search-input { font-size: 16px; } /* Always prevent iOS zoom */
 }
 
-/* ── Very small phones (≤380px) ──────────────────────────────────────────── */
+/* ── Very small phones ≤ 380px ─────────────────────────────── */
 @media (max-width: 380px) {
-  .logo { gap: 6px; }
-  .logo-glyph { font-size: 1.1rem; }
   .logo span:not(.logo-glyph) { font-size: 1.2rem; }
-  #play-pause-btn { width: 46px; height: 46px; }
+  #play-pause-btn     { width: 48px; height: 48px; margin: 0 2px; }
   #play-pause-btn svg { width: 20px; height: 20px; }
-  .ctrl-btn { padding: 7px; min-width: 38px; min-height: 38px; }
-  #expand-play-btn { width: 60px; height: 60px; }
-  .expand-ctrl-btn { min-width: 48px; min-height: 48px; padding: 10px; }
+  .ctrl-btn { padding: 6px; min-width: 38px; min-height: 38px; }
+  .ctrl-btns { gap: 2px; }
+  #sidebar-close-btn { min-width: 40px; min-height: 40px; }
 }
 
-/* ── Large screens ────────────────────────────────────────────────────────── */
+/* ── Large screens ≥ 1400px ────────────────────────────────── */
 @media (min-width: 1400px) {
   #app { grid-template-columns: 280px 1fr; }
-  .player-top-row { flex: 0 0 280px; }
-  #track-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .player-info { flex: 0 0 280px; }
+  #track-list  { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 @media (min-width: 1800px) {
   #app { grid-template-columns: 300px 1fr; }
-  .player-top-row { flex: 0 0 300px; }
-  #track-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .player-info { flex: 0 0 300px; }
+  #track-list  { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 }
